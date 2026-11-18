@@ -2,6 +2,26 @@
 
 This branch builds one NDK archive containing three independently runnable host-tool sets. The host tools use **static Linux-musl ELF executables**; directory tags are package identifiers and do not imply Bionic linkage.
 
+## Pinned upstream source baseline
+
+The immutable source revisions used by the patch-applicability checks are recorded in
+`patches/upstream-revisions.lock`. The lock currently identifies:
+
+- LLVM upstream base: `llvm-project@386af4a5c64ab75eaee2448dc38f2e34a40bfed0`
+- AOSP LLVM Android build scripts: `llvm_android@19756bd1d4ffca122636e553ab43b4befe827183`
+- AOSP NDK source: `platform/ndk@c4bdd155116a9b42767534b35e93f83a91e4a06f`
+- Release family: `clang-r563880`
+
+The LLVM project revision is the upstream base revision identified for the r563880 candidate; it is not, by itself, a complete reproduction of Google's final r563880 source tree. The Android release cherry-picks and downstream patch set must still be reconciled against the matching `clang_source_info.md` / release patch metadata before claiming a bit-for-bit release baseline.
+
+Fetch these exact source commits into an isolated source directory with:
+
+```bash
+LLVM_ROOT="$PWD/llvm-toolchain" bash patches/fetch_upstream_sources.sh
+```
+
+The fetcher refuses non-Git destination paths and rejects an origin or commit mismatch. It does not build LLVM, prepare sysroots/dependencies, or produce an NDK archive.
+
 ## Host matrix
 
 | `HOST_ARCH` | Package directory | Static-musl host triple | Sysroot |
