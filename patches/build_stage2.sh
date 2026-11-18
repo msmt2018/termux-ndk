@@ -95,6 +95,9 @@ for required in "${DEPENDENCY_INPUTS[@]}"; do
     fi
 done
 
+HOST_ARCH="${HOST_ARCH}" DEPS_PREFIX="${DEPS_PREFIX}" PYTHON_TARGET_ROOT="${PYTHON_TARGET_ROOT}" \
+    bash "${SCRIPT_DIR}/validate_stage2_inputs.sh"
+
 command -v cmake >/dev/null 2>&1 || { echo "error: cmake is required" >&2; exit 6; }
 command -v ninja >/dev/null 2>&1 || { echo "error: ninja is required" >&2; exit 6; }
 
