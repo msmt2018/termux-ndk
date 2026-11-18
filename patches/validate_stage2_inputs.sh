@@ -11,6 +11,7 @@ source "${SCRIPT_DIR}/host-env.sh" "${HOST_ARCH}"
 
 DEPS_PREFIX="${DEPS_PREFIX:-${LLVM_ROOT}/out/lib}"
 PYTHON_TARGET_ROOT="${PYTHON_TARGET_ROOT:-${LLVM_ROOT}/out/python-${TERMUX_NDK_HOST_TRIPLE}-install}"
+: "${PYTHON_VERSION:?error: source patches/resolve_python_version.sh before validating Stage2 inputs}"
 
 case "${HOST_ARCH}" in
     aarch64) EXPECTED_MACHINE="AArch64" ;;
@@ -33,7 +34,7 @@ ARCHIVES=(
     "${DEPS_PREFIX}/libncurses-${TERMUX_NDK_HOST_TRIPLE}-install/lib/libncurses.a"
     "${DEPS_PREFIX}/libncurses-${TERMUX_NDK_HOST_TRIPLE}-install/lib/libform.a"
     "${DEPS_PREFIX}/libncurses-${TERMUX_NDK_HOST_TRIPLE}-install/lib/libpanel.a"
-    "${PYTHON_TARGET_ROOT}/lib/libpython3.12.a"
+    "${PYTHON_TARGET_ROOT}/lib/libpython${PYTHON_VERSION}.a"
 )
 
 checked=0
