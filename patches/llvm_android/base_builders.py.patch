@@ -9,7 +9,7 @@
  
      @property
      def cxxflags(self) -> List[str]:
-@@ -743,1 +743,10 @@
+@@ -743,1 +743,11 @@
 -        defines['LLVM_TARGETS_TO_BUILD'] = ';'.join(sorted(self.llvm_targets))
 +        # Build the backends needed by all four Android target ABIs, while
 +        # selecting the host executable architecture from LinuxMuslHostConfig.
