@@ -286,7 +286,9 @@ cmake -G Ninja \
     ${LLVM_SRC_DIR}
 
 if [[ "${BUILD_STAGE2:-0}" == "1" ]]; then
-    BUILD_JOBS="${BUILD_JOBS:-$(nproc)}"
+    DEFAULT_JOBS=2
+    if command -v nproc >/dev/null 2>&1; then DEFAULT_JOBS="$(nproc)"; fi
+    BUILD_JOBS="${BUILD_JOBS:-${DEFAULT_JOBS}}"
     if ! [[ "${BUILD_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
         echo "error: BUILD_JOBS must be a positive integer" >&2
         exit 7
