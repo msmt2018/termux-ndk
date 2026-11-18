@@ -1,1 +1,13 @@
-
+--- a/src/llvm_android/base_builders.py
++++ b/src/llvm_android/base_builders.py
+@@ -743,1 +743,9 @@
+-        defines['LLVM_TARGETS_TO_BUILD'] = ';'.join(sorted(self.llvm_targets))
++        # Build the backends needed by all four Android target ABIs, while
++        # selecting the host executable architecture from LinuxMuslHostConfig.
++        defines['LLVM_TARGETS_TO_BUILD'] = 'AArch64;ARM;X86'
++        defines['LLVM_ENABLE_PIC'] = 'ON'
++        defines['CMAKE_BUILD_WITH_INSTALL_RPATH'] = 'ON'
++        defines['CMAKE_POLICY_DEFAULT_CMP0116'] = 'OLD'
++        host_arch = self._config.llvm_triple.split('-', 1)[0]
++        defines['LLVM_TARGET_ARCH'] = {'aarch64': 'AArch64', 'arm': 'ARM', 'x86_64': 'X86'}[host_arch]
++        defines['LLVM_HOST_TRIPLE'] = self._config.llvm_triple
