@@ -113,6 +113,11 @@ jobs:
               with patch("ndk.hosts.os.uname", return_value=SimpleNamespace(machine=machine)):
                   assert host_to_tag(Host.Linux) == tag, (machine, tag)
 
+          # A 32-bit process may run on a 64-bit ARM kernel.
+          with patch("ndk.hosts.os.uname", return_value=SimpleNamespace(machine="aarch64")):
+              with patch("ndk.hosts.struct.calcsize", return_value=4):
+                  assert host_to_tag(Host.Linux) == "android-armv7"
+
           os.environ["TERMUX_NDK_HOST_TAG"] = "invalid"
           try:
               host_to_tag(Host.Linux)
