@@ -1,0 +1,9 @@
+# Pinned upstream revisions for the clang-r563880 baseline.
+# Values are full immutable Git commit IDs; do not replace with moving branches.
+CLANG_RELEASE="r563880"
+LLVM_PROJECT_URL="https://github.com/llvm/llvm-project.git"
+LLVM_PROJECT_REVISION="386af4a5c64ab75eaee2448dc38f2e34a40bfed0"
+LLVM_ANDROID_URL="https://android.googlesource.com/toolchain/llvm_android"
+LLVM_ANDROID_REVISION="19756bd1d4ffca122636e553ab43b4befe827183"
+NDK_URL="https://android.googlesource.com/platform/ndk"
+NDK_REVISION="c4bdd155116a9b42767534b35e93f83a91e4a06f"
