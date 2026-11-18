@@ -127,8 +127,8 @@ cmake -G Ninja \
     -DCMAKE_C_FLAGS='-static -fPIC -Wno-unused-command-line-argument -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
     -DCMAKE_CXX_FLAGS='-static -fPIC -Wno-unused-command-line-argument -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
     -DCMAKE_EXE_LINKER_FLAGS='-static -fuse-ld=lld -Wl,--hash-style=both' \
-    -DLLVM_TARGETS_TO_BUILD='AArch64;ARM;X86' \\
-    ${NATIVE_TOOL_ARGS[@]} \\
+    -DLLVM_TARGETS_TO_BUILD='AArch64;ARM;X86' \
+    ${NATIVE_TOOL_ARGS[@]} \
     -DLLVM_ENABLE_PROJECTS='bolt;clang;clang-tools-extra;lld;lldb;polly' \
     -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
     -DCMAKE_INSTALL_LIBDIR=lib \
