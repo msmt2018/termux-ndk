@@ -1,0 +1,80 @@
+name: Upstream patch applicability
+
+on:
+  push:
+    branches:
+      - multi-host-architecture-patches
+    paths:
+      - "patches/llvm_android/**"
+      - "patches/ndk/**"
+      - ".github/workflows/upstream-patch-applicability.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  llvm-android-patches:
+    name: LLVM Android patch set (${{ matrix.host_arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host_arch: aarch64
+            config_patch: configs.py.patch
+          - host_arch: x86_64
+            config_patch: configs-x86_64.py.patch
+          - host_arch: armv7
+            config_patch: configs-armv7.py.patch
+    steps:
+      - name: Checkout this fork
+        uses: actions/checkout@v4
+
+      - name: Fetch pinned AOSP LLVM Android source
+        run: |
+          set -Eeuo pipefail
+          mkdir -p /tmp/aosp/toolchain
+          git clone --depth=1 --filter=blob:none \
+            --branch mirror-goog-llvm-r563880-release \
+            https://android.googlesource.com/toolchain/llvm_android \
+            /tmp/aosp/toolchain/llvm_android
+
+      - name: Check and apply LLVM Android patches
+        run: |
+          set -Eeuo pipefail
+          cd /tmp/aosp
+          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/paths.py.patch"
+          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/builders.py.patch"
+          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/base_builders.py.patch"
+          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/${{ matrix.config_patch }}"
+
+  ndk-host-patches:
+    name: NDK host patch set (${{ matrix.host_arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host_arch: aarch64
+            toolchain_patch: toolchains.py.patch
+          - host_arch: x86_64
+            toolchain_patch: toolchains-x86_64.py.patch
+          - host_arch: armv7
+            toolchain_patch: toolchains-armv7.py.patch
+    steps:
+      - name: Checkout this fork
+        uses: actions/checkout@v4
+
+      - name: Fetch AOSP NDK source
+        run: |
+          set -Eeuo pipefail
+          git clone --depth=1 --filter=blob:none --branch main \
+            https://android.googlesource.com/platform/ndk /tmp/aosp-ndk
+
+      - name: Check and apply NDK host patches
+        run: |
+          set -Eeuo pipefail
+          cd /tmp/aosp-ndk
+          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/ndk/hosts.py.patch"
+          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/ndk/${{ matrix.toolchain_patch }}"
