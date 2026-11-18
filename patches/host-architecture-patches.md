@@ -176,3 +176,18 @@ Before running the NDK host build for one architecture, export both values:
 `TERMUX_NDK_HOST_TAG` selects the package directory; `TERMUX_NDK_SYSROOT` must point to the actual target-architecture Musl sysroot directory, not the NDK Android application sysroot. The NDK toolchain patch intentionally raises an error if this variable is absent instead of silently using the old glibc/GCC sysroot.
 
 For cross-builds on an x86_64 runner, set these variables explicitly for each matrix job. The machine auto-detection in `hosts.py` is intended for runtime selection when users execute the packaged NDK on their device.
+
+
+## Shared host environment helper
+
+`patches/host-env.sh` is now the single source of truth for the host package tag, Musl triple, default Zig wrapper, CMake processor, and default sysroot path. Both `build_stage2.sh` and `validate_host_toolchain.sh` source it, so the LLVM stage2 and NDK layers cannot silently drift to different architecture mappings.
+
+For the NDK build step, source it in the same shell before invoking the upstream NDK build:
+
+```bash
+source patches/host-env.sh aarch64
+# or x86_64 / armv7
+# TERMUX_NDK_HOST_TAG and TERMUX_NDK_SYSROOT are now exported.
+```
+
+Override `LLVM_ROOT` or `TERMUX_NDK_SYSROOT` before sourcing when the build workspace uses non-default locations. The NDK toolchain patch verifies that the selected sysroot directory exists.
