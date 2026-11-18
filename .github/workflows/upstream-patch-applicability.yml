@@ -48,6 +48,7 @@ jobs:
           find . -maxdepth 3 -type f -name "paths.py" -o -name "configs.py" | sort
           patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/paths.py.patch"
           patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/builders.py.patch"
+          grep -n -C 8 "LLVM_TARGETS_TO_BUILD" src/llvm_android/base_builders.py
           patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/base_builders.py.patch"
           patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/${{ matrix.config_patch }}"
 
