@@ -46,7 +46,6 @@ jobs:
           cd /tmp/aosp/toolchain/llvm_android
           echo "LLVM checkout root: $PWD"
           find . -maxdepth 3 -type f -name "paths.py" -o -name "configs.py" | sort
-          patch -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/paths.py.patch"
           patch -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/builders.py.patch"
           grep -n -C 8 "LLVM_TARGETS_TO_BUILD" src/llvm_android/base_builders.py
           patch -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/base_builders.py.patch"
