@@ -1,31 +1,37 @@
 --- a/ndk/hosts.py
 +++ b/ndk/hosts.py
-@@ -21,6 +21,7 @@
+@@ -21,6 +21,8 @@
  from __future__ import absolute_import
  
  import enum
 +import os
++import struct
  import sys
  
  
-@@ -67,6 +68,25 @@ def host_to_tag(host: Host) -> str:
+@@ -67,6 +69,29 @@ def host_to_tag(host: Host) -> str:
      'windows-x86_64'
      """
 +    if host == Host.Linux:
 +        # A Linux process may be running on Android/Termux. The NDK's
 +        # original Host enum describes the OS only, so choose the package
-+        # directory from the actual CPU architecture separately.
++        # directory from the process architecture, not just the kernel.
 +        tag = os.environ.get('TERMUX_NDK_HOST_TAG')
 +        if tag is None:
 +            machine = os.uname().machine.lower()
++            pointer_bits = struct.calcsize('P') * 8
 +            if machine in ('aarch64', 'arm64'):
-+                tag = 'android-arm64'
++                tag = 'android-armv7' if pointer_bits == 32 else 'android-arm64'
 +            elif machine in ('armv7l', 'armv8l', 'arm'):
 +                tag = 'android-armv7'
-+            elif machine in ('x86_64', 'amd64'):
++            elif machine in ('x86_64', 'amd64') and pointer_bits == 64:
 +                tag = 'linux-x86_64'
 +            else:
-+                raise ValueError('Unsupported Linux host architecture: {}'.format(machine))
++                raise ValueError(
++                    'Unsupported Linux host architecture/word size: {} / {}-bit'.format(
++                        machine, pointer_bits
++                    )
++                )
 +        if tag not in ('linux-x86_64', 'android-arm64', 'android-armv7'):
 +            raise ValueError('Unsupported TERMUX_NDK_HOST_TAG: {}'.format(tag))
 +        return tag
