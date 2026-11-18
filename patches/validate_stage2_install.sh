@@ -29,6 +29,11 @@ while IFS= read -r -d '' binary; do
         readelf -h "${binary}" >&2
         exit 5
     fi
+    if [[ "${HOST_ARCH}" == "armv7" ]] && ! grep -Fqi "hard-float ABI" <<< "${header}"; then
+        echo "error: ARMv7 ELF does not declare the hard-float ABI: ${binary}" >&2
+        readelf -h "${binary}" >&2
+        exit 9
+    fi
 
     if readelf -l "${binary}" 2>/dev/null | grep -q 'INTERP'; then
         echo "error: installed executable has PT_INTERP: ${binary}" >&2
