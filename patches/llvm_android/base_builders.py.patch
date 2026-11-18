@@ -1,6 +1,6 @@
 --- a/src/llvm_android/base_builders.py
 +++ b/src/llvm_android/base_builders.py
-@@ -743,1 +743,9 @@
+@@ -743,1 +743,7 @@
 -        defines['LLVM_TARGETS_TO_BUILD'] = ';'.join(sorted(self.llvm_targets))
 +        # Build the backends needed by all four Android target ABIs, while
 +        # selecting the host executable architecture from LinuxMuslHostConfig.
