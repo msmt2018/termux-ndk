@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: upstream-patch-applicability-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   llvm-android-patches:
     name: LLVM Android patch set (${{ matrix.host_arch }})
