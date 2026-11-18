@@ -48,10 +48,10 @@ NATIVE_TOOL_ARGS=("-DLLVM_NATIVE_TOOL_DIR=${LLVM_NATIVE_TOOL_DIR}")
 BUILD_MACHINE="$(uname -m)"
 case "${BUILD_MACHINE}:${HOST_ARCH}" in
     x86_64:x86_64|aarch64:aarch64|armv7l:armv7|armv8l:armv7)
-        CMAKE_CROSSCOMPILING=FALSE
+        HOST_NATIVE_BUILD=TRUE
         ;;
     *)
-        CMAKE_CROSSCOMPILING=TRUE
+        HOST_NATIVE_BUILD=FALSE
         ;;
 esac
 
@@ -118,7 +118,7 @@ echo "LLVM profile data        : ${PROFDATA_FILE}"
 echo "Native TableGen tools    : ${LLVM_NATIVE_TOOL_DIR}"
 echo "Build directory          : ${BUILD_DIR}"
 echo "Install prefix           : ${INSTALL_PREFIX}"
-echo "Cross compiling          : ${CMAKE_CROSSCOMPILING}"
+echo "Host matches build machine: ${HOST_NATIVE_BUILD}"
 
 cmake -G Ninja \
     -DCMAKE_C_COMPILER="${TOOLCHAIN}/bin/cc" \
