@@ -41,7 +41,7 @@ The existing unsuffixed patch files remain the AArch64 host variant.
 
 ## Known follow-up required before building
 
-The current `patches/build_stage2.sh` is still hard-coded to `aarch64-unknown-linux-musl` and AArch64-specific dependency/sysroot paths. These patch sets only establish the NDK and llvm_android host-triple/configuration layer; they do **not** make stage2 multi-architecture yet. Stage2 must be parameterized separately for x86_64 and ARMv7, and the produced binaries must be checked with `readelf -h`, `readelf -l`, and runtime smoke tests on real Android devices / Termux and proot environments.
+This was the original repository state before the multi-host work. Stage2 is now parameterized by `HOST_ARCH`, and a compiler smoke-test gate has been added. Real compiler wrappers, sysroots, dependency archives, and on-device execution still need to be supplied and tested.
 
 Also verify the actual upstream source revision before applying: the patch context is based on the source layout represented by the repository's existing AArch64 patches. AOSP source revisions can change these contexts.
 
@@ -136,3 +136,28 @@ HOST_ARCH=armv7 bash patches/validate_host_toolchain.sh
 `build_stage2.sh` now invokes this validation automatically before CMake configuration. This prevents an incorrectly named or misconfigured compiler wrapper from reaching the long LLVM build.
 
 The validator has been added as source but has not yet been run against real compiler wrappers in this environment. It is a preflight gate, not a substitute for running the produced LLVM binaries on Android devices.
+
+
+## NDK host-tag selection
+
+The upstream NDK `Host` enum describes operating systems, not CPU architectures. On Linux it historically emitted only `linux-x86_64`, which cannot represent the two Android host variants.
+
+The new `patches/ndk/hosts.py.patch` adds architecture-aware Linux package tags:
+
+| Runtime/build machine | NDK host tag |
+|---|---|
+| x86_64 / amd64 | `linux-x86_64` |
+| AArch64 / arm64 | `android-arm64` |
+| ARMv7 / armv8l 32-bit userspace | `android-armv7` |
+
+For reproducible cross-builds on an x86_64 CI runner, set `TERMUX_NDK_HOST_TAG` explicitly to one of those three values. If unset, the patch detects the machine architecture with `os.uname().machine`. Unsupported tags and unknown architectures fail instead of silently falling back to x86_64.
+
+This change only selects the package directory. It does not by itself make the compiler, sysroot, linker, or dependency libraries architecture-correct.
+
+## LLVM host config corrections
+
+The three `llvm_android/configs*.py.patch` variants now select the upstream `LinuxMuslHostConfig` for Linux builds and set its architecture to AArch64, x86_64, or ARM respectively. The generic `LinuxConfig` (glibc) is no longer rewritten to use Android/Bionic triples.
+
+The `base_builders.py.patch` now derives `--target`, `LLVM_HOST_TRIPLE`, and `LLVM_TARGET_ARCH` from the selected host config. LLVM backends are restricted to `AArch64;ARM;X86`, which cover the four requested Android target ABIs without building unrelated backends.
+
+The NDK `toolchains*.py.patch` variants still require a separate sysroot/path audit before they can be considered consistent with static-musl Stage2. Do not apply them as a complete final integration set yet. In particular, verify that NDK's host-tool build paths do not accidentally reuse the Google glibc stage0 sysroot or stale GCC library directories.
