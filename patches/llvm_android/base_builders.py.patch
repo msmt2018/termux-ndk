@@ -1,5 +1,5 @@
---- a/toolchain/llvm_android/base_builders.py
-+++ b/toolchain/llvm_android/base_builders.py
+--- a/src/llvm_android/base_builders.py
++++ b/src/llvm_android/base_builders.py
 @@ -193,7 +193,7 @@
      @property
      def cflags(self) -> List[str]:
