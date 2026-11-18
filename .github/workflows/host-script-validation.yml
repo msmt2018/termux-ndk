@@ -36,6 +36,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           bash -n patches/build_stage2.sh
+          bash -n patches/resolve_python_version.sh
           bash -n patches/build_native_tools.sh
           bash -n patches/build_all_hosts.sh
           bash -n patches/validate_host_toolchain.sh
@@ -75,7 +76,7 @@ jobs:
 
       - name: Run ShellCheck
         run: |
-          shellcheck --severity=error patches/build_stage2.sh patches/build_native_tools.sh patches/build_all_hosts.sh patches/validate_host_toolchain.sh patches/host-env.sh patches/validate_stage2_install.sh patches/validate_stage2_inputs.sh
+          shellcheck --severity=error patches/build_stage2.sh patches/resolve_python_version.sh patches/build_native_tools.sh patches/build_all_hosts.sh patches/validate_host_toolchain.sh patches/host-env.sh patches/validate_stage2_install.sh patches/validate_stage2_inputs.sh
 
       - name: Validate unified diff hunk counts
         run: python3 patches/validate_patch_hunks.py
@@ -86,7 +87,10 @@ jobs:
           set -Eeuo pipefail
           temp="$(mktemp -d)"
           trap 'rm -rf "$temp"' EXIT
-          mkdir -p "$temp/deps" "$temp/python/lib"
+          mkdir -p "$temp/deps" "$temp/python/lib" "$temp/python-host/include/python3.11" "$temp/python-host/bin"
+          printf '#!/bin/sh\\nexit 0\\n' > "$temp/python-host/bin/python3.11"
+          chmod +x "$temp/python-host/bin/python3.11"
+          PYTHON_HOST_ROOT="$temp/python-host" bash -c 'source patches/resolve_python_version.sh; test "$PYTHON_VERSION" = 3.11; test "$PYTHON_HOST_EXECUTABLE" = "$PYTHON_HOST_ROOT/bin/python3.11"'
           printf 'int archive_probe(void) { return 0; }\n' > "$temp/probe.c"
           cc -c "$temp/probe.c" -o "$temp/probe.o"
           ar rcs "$temp/probe.a" "$temp/probe.o"
@@ -99,9 +103,9 @@ jobs:
           for name in libncurses libform libpanel; do
             cp "$temp/probe.a" "$temp/deps/libncurses-$triple-install/lib/$name.a"
           done
-          cp "$temp/probe.a" "$temp/python/lib/libpython3.12.a"
-          HOST_ARCH=x86_64 DEPS_PREFIX="$temp/deps" PYTHON_TARGET_ROOT="$temp/python" bash patches/validate_stage2_inputs.sh
-          if HOST_ARCH=aarch64 DEPS_PREFIX="$temp/deps" PYTHON_TARGET_ROOT="$temp/python" bash patches/validate_stage2_inputs.sh; then
+          cp "$temp/probe.a" "$temp/python/lib/libpython3.11.a"
+          HOST_ARCH=x86_64 PYTHON_VERSION=3.11 DEPS_PREFIX="$temp/deps" PYTHON_TARGET_ROOT="$temp/python" bash patches/validate_stage2_inputs.sh
+          if HOST_ARCH=aarch64 PYTHON_VERSION=3.11 DEPS_PREFIX="$temp/deps" PYTHON_TARGET_ROOT="$temp/python" bash patches/validate_stage2_inputs.sh; then
             echo "validator accepted x86_64 archives for AArch64" >&2
             exit 1
           fi
