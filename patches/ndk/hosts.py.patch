@@ -8,9 +8,12 @@
  import sys
  
  
-@@ -46,5 +47,8 @@ def get_host_tag() -> str:
+@@ -46,9 +47,9 @@ def get_host_tag() -> str:
  def get_host_tag() -> str:
      """Returns the host tag used for testing on the current host."""
+-    if sys.platform.startswith('linux'):
+-        return 'linux-x86_64'
+-    elif sys.platform == 'darwin':
 +    if sys.platform.startswith('linux'):
 +        return host_to_tag(get_default_host())
 +    elif sys.platform == 'darwin':
