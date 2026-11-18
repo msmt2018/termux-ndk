@@ -29,6 +29,7 @@ TERMUX_NDK_SYSROOT="${SYSROOT}"
 export TERMUX_NDK_SYSROOT
 PYTHON_HOST_ROOT="${PYTHON_HOST_ROOT:-${LLVM_ROOT}/prebuilts/python/linux-x86}"
 PYTHON_TARGET_ROOT="${PYTHON_TARGET_ROOT:-${LLVM_ROOT}/out/python-${MUSL_TRIPLE}-install}"
+SWIG_HOST_EXECUTABLE="${SWIG_HOST_EXECUTABLE:-${LLVM_ROOT}/out/host-tools/swig-install/bin/swig}"
 
 # Cross-compilation is determined from the actual build machine, not inferred
 # from the output directory name. Zig wrappers must already target HOST_ARCH.
@@ -54,6 +55,7 @@ for required in "${LLVM_SRC_DIR}/CMakeLists.txt" "${SYSROOT}" "${PYTHON_HOST_ROO
         exit 4
     fi
 done
+[[ -x "${SWIG_HOST_EXECUTABLE}" ]] || { echo "error: missing build-machine-native SWIG executable: ${SWIG_HOST_EXECUTABLE}" >&2; exit 5; }
 
 # Fail before CMake configuration if any architecture-specific static
 # dependency has not been built and installed for this exact musl triple.
@@ -64,7 +66,6 @@ DEPENDENCY_INPUTS=(
     "${DEPS_PREFIX}/libxml2-${MUSL_TRIPLE}-install/lib/libxml2.a"
     "${DEPS_PREFIX}/libzstd-${MUSL_TRIPLE}-install/include"
     "${DEPS_PREFIX}/libzstd-${MUSL_TRIPLE}-install/lib/libzstd.a"
-    "${DEPS_PREFIX}/swig-${MUSL_TRIPLE}-install/bin/swig"
     "${DEPS_PREFIX}/liblzma-${MUSL_TRIPLE}-install/include"
     "${DEPS_PREFIX}/liblzma-${MUSL_TRIPLE}-install/lib/liblzma.a"
     "${DEPS_PREFIX}/libedit-${MUSL_TRIPLE}-install/include"
@@ -99,6 +100,7 @@ echo "Sysroot                  : ${SYSROOT}"
 echo "Dependency prefix        : ${DEPS_PREFIX}"
 echo "Python host runtime      : ${PYTHON_HOST_ROOT}"
 echo "Python target library    : ${PYTHON_TARGET_ROOT}"
+echo "Native SWIG executable   : ${SWIG_HOST_EXECUTABLE}"
 echo "Build directory          : ${BUILD_DIR}"
 echo "Install prefix           : ${INSTALL_PREFIX}"
 echo "Cross compiling          : ${CMAKE_CROSSCOMPILING}"
@@ -185,7 +187,7 @@ cmake -G Ninja \
     -Dzstd_LIBRARY=${DEPS_PREFIX}/libzstd-${MUSL_TRIPLE}-install/lib/libzstd.a \
     -Dzstd_INCLUDE_DIR=${DEPS_PREFIX}/libzstd-${MUSL_TRIPLE}-install/include \
     -DLLDB_ENABLE_LUA=OFF \
-    -DSWIG_EXECUTABLE=${DEPS_PREFIX}/swig-${MUSL_TRIPLE}-install/bin/swig \
+    -DSWIG_EXECUTABLE=${SWIG_HOST_EXECUTABLE} \
     -DLLDB_ENABLE_PYTHON=ON \
     -DLLDB_EMBED_PYTHON_HOME=OFF \
     -DLLDB_ENABLE_LZMA=ON \
