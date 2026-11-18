@@ -44,6 +44,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           cd /tmp/aosp/toolchain/llvm_android
+          echo "LLVM checkout root: $PWD"
+          find . -maxdepth 3 -type f -name "paths.py" -o -name "configs.py" | sort
           patch --dry-run -p3 < "$GITHUB_WORKSPACE/patches/llvm_android/paths.py.patch"
           patch --dry-run -p3 < "$GITHUB_WORKSPACE/patches/llvm_android/builders.py.patch"
           patch --dry-run -p3 < "$GITHUB_WORKSPACE/patches/llvm_android/base_builders.py.patch"
