@@ -1,5 +1,5 @@
---- a/toolchain/llvm_android/configs.py
-+++ b/toolchain/llvm_android/configs.py
+--- a/src/llvm_android/configs.py
++++ b/src/llvm_android/configs.py
 @@ -24,3 +24,4 @@
  import functools
  import json
