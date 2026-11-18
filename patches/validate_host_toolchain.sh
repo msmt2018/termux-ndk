@@ -5,35 +5,21 @@ set -Eeuo pipefail
 # expensive LLVM stage2 build. This validates compiler output, not NDK packaging.
 #
 # Usage:
-#   HOST_ARCH=aarch64 ./patches/validate_host_toolchain.sh
-#   HOST_ARCH=x86_64 TOOLCHAIN=/path/to/wrapper ./patches/validate_host_toolchain.sh
-#   HOST_ARCH=armv7 TOOLCHAIN=/path/to/wrapper ./patches/validate_host_toolchain.sh
-
+#   SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 HOST_ARCH="${HOST_ARCH:-aarch64}"
+LLVM_ROOT="${LLVM_ROOT:-$HOME/proj/llvm-toolchain}"
+source "${SCRIPT_DIR}/host-env.sh" "${HOST_ARCH}"
+
+EXPECTED_TRIPLE="${TERMUX_NDK_HOST_TRIPLE}"
 case "${HOST_ARCH}" in
-    aarch64)
-        EXPECTED_TRIPLE="aarch64-unknown-linux-musl"
-        EXPECTED_MACHINE="AArch64"
-        DEFAULT_TOOLCHAIN="$HOME/opt/zig-as-llvm"
-        ;;
-    x86_64)
-        EXPECTED_TRIPLE="x86_64-unknown-linux-musl"
-        EXPECTED_MACHINE="Advanced Micro Devices X86-64"
-        DEFAULT_TOOLCHAIN="$HOME/opt/zig-as-llvm-x86_64"
-        ;;
-    armv7)
-        EXPECTED_TRIPLE="arm-unknown-linux-musleabihf"
-        EXPECTED_MACHINE="ARM"
-        DEFAULT_TOOLCHAIN="$HOME/opt/zig-as-llvm-armv7"
-        ;;
-    *)
-        echo "error: unsupported HOST_ARCH '${HOST_ARCH}'" >&2
-        exit 2
-        ;;
+    aarch64) EXPECTED_MACHINE="AArch64" ;;
+    x86_64) EXPECTED_MACHINE="Advanced Micro Devices X86-64" ;;
+    armv7) EXPECTED_MACHINE="ARM" ;;
+    *) echo "error: unsupported HOST_ARCH '${HOST_ARCH}'" >&2; exit 2 ;;
 esac
 
 TOOLCHAIN="${TOOLCHAIN:-${DEFAULT_TOOLCHAIN}}"
-SYSROOT="${SYSROOT:-$HOME/proj/llvm-toolchain/prebuilts/build-tools/sysroots/${EXPECTED_TRIPLE}}"
+SYSROOT="${SYSROOT:-${TERMUX_NDK_SYSROOT}}"
 CC="${TOOLCHAIN}/bin/cc"
 CXX="${TOOLCHAIN}/bin/c++"
 
