@@ -37,6 +37,7 @@ jobs:
           set -Eeuo pipefail
           bash -n patches/build_stage2.sh
           bash -n patches/build_native_tools.sh
+          bash -n patches/build_all_hosts.sh
           bash -n patches/validate_host_toolchain.sh
           bash -n patches/host-env.sh
           bash -n patches/validate_stage2_install.sh
@@ -74,7 +75,7 @@ jobs:
 
       - name: Run ShellCheck
         run: |
-          shellcheck --severity=error patches/build_stage2.sh patches/build_native_tools.sh patches/validate_host_toolchain.sh patches/host-env.sh patches/validate_stage2_install.sh patches/validate_stage2_inputs.sh
+          shellcheck --severity=error patches/build_stage2.sh patches/build_native_tools.sh patches/build_all_hosts.sh patches/validate_host_toolchain.sh patches/host-env.sh patches/validate_stage2_install.sh patches/validate_stage2_inputs.sh
 
       - name: Validate unified diff hunk counts
         run: python3 patches/validate_patch_hunks.py
