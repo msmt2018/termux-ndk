@@ -102,6 +102,11 @@ jobs:
           from types import SimpleNamespace
           from unittest.mock import patch
           from ndk.hosts import Host, host_to_tag
+          from ndk.toolchains import HOST_TRIPLE_MAP
+
+          assert HOST_TRIPLE_MAP[Host.Linux] == os.environ["TERMUX_NDK_HOST_TRIPLE"], (
+              HOST_TRIPLE_MAP[Host.Linux], os.environ["TERMUX_NDK_HOST_TRIPLE"]
+          )
 
           for tag in ("linux-x86_64", "android-arm64", "android-armv7"):
               os.environ["TERMUX_NDK_HOST_TAG"] = tag
@@ -129,5 +134,5 @@ jobs:
               pass
           else:
               raise AssertionError("invalid host tag was accepted")
-          print("PASS: NDK host tag override, auto-detection and rejection")
+          print("PASS: NDK host triple, host tag override, auto-detection and rejection")
           PY
