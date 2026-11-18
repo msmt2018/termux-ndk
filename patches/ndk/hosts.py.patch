@@ -1,0 +1,35 @@
+--- a/ndk/hosts.py
++++ b/ndk/hosts.py
+@@ -16,6 +16,7 @@
+ 
+ import enum
++import os
+ import sys
+ 
+ 
+@@ -50,6 +51,20 @@ def host_to_tag(host: Host) -> str:
+     'windows-x86_64'
+     """
++    if host == Host.Linux:
++        # A Linux process may be running on Android/Termux. The NDK's
++        # original Host enum describes the OS only, so choose the package
++        # directory from the actual CPU architecture separately.
++        tag = os.environ.get('TERMUX_NDK_HOST_TAG')
++        if tag is None:
++            machine = os.uname().machine.lower()
++            if machine in ('aarch64', 'arm64'):
++                tag = 'android-arm64'
++            elif machine in ('armv7l', 'armv8l', 'arm'):
++                tag = 'android-armv7'
++            elif machine in ('x86_64', 'amd64'):
++                tag = 'linux-x86_64'
++            else:
++                raise ValueError('Unsupported Linux host architecture: {}'.format(machine))
++        if tag not in ('linux-x86_64', 'android-arm64', 'android-armv7'):
++            raise ValueError('Unsupported TERMUX_NDK_HOST_TAG: {}'.format(tag))
++        return tag
++
+     # TODO: Clean up since this can all be + -x86_64 once we rename the windows
+     # value.
+     if not host.is_windows:
+         return host.value + '-x86_64'
