@@ -160,4 +160,19 @@ The three `llvm_android/configs*.py.patch` variants now select the upstream `Lin
 
 The `base_builders.py.patch` now derives `--target`, `LLVM_HOST_TRIPLE`, and `LLVM_TARGET_ARCH` from the selected host config. LLVM backends are restricted to `AArch64;ARM;X86`, which cover the four requested Android target ABIs without building unrelated backends.
 
-The NDK `toolchains*.py.patch` variants still require a separate sysroot/path audit before they can be considered consistent with static-musl Stage2. Do not apply them as a complete final integration set yet. In particular, verify that NDK's host-tool build paths do not accidentally reuse the Google glibc stage0 sysroot or stale GCC library directories.
+The NDK `toolchains*.py.patch` variants have now been changed to use the matching static-musl triple, require `TERMUX_NDK_SYSROOT`, take Linux host library search paths from that sysroot, and avoid adding the stage0 Clang `lib64` directory to target host links. Their application and Python syntax are checked against the pinned NDK source by CI. This is still source-level integration; it does not prove the selected sysroot contains every required library or that the resulting binaries run.
+
+
+## Environment required by the NDK host toolchain patches
+
+Before running the NDK host build for one architecture, export both values:
+
+| Host variant | `TERMUX_NDK_HOST_TAG` | `TERMUX_NDK_SYSROOT` |
+|---|---|---|
+| x86-64 | `linux-x86_64` | the `x86_64-unknown-linux-musl` sysroot |
+| AArch64 | `android-arm64` | the `aarch64-unknown-linux-musl` sysroot |
+| ARMv7 | `android-armv7` | the `arm-unknown-linux-musleabihf` sysroot |
+
+`TERMUX_NDK_HOST_TAG` selects the package directory; `TERMUX_NDK_SYSROOT` must point to the actual target-architecture Musl sysroot directory, not the NDK Android application sysroot. The NDK toolchain patch intentionally raises an error if this variable is absent instead of silently using the old glibc/GCC sysroot.
+
+For cross-builds on an x86_64 runner, set these variables explicitly for each matrix job. The machine auto-detection in `hosts.py` is intended for runtime selection when users execute the packaged NDK on their device.
