@@ -44,6 +44,21 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           text = Path("patches/build_stage2.sh").read_text()
+          required = (
+              "-DLLVM_HOST_TRIPLE=${MUSL_TRIPLE}",
+              "-DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER",
+              "-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY",
+              "-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY",
+              "-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=ONLY",
+          )
+          for option in required:
+              assert option in text, option
+          assert '"-DCMAKE_FIND_ROOT_PATH=${SYSROOT};' in text
+          print("PASS: Stage2 target triple and target-only CMake dependency search")
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path("patches/build_stage2.sh").read_text()
           lines = text.splitlines()
           swig = next(line for line in lines if "-DSWIG_EXECUTABLE=" in line)
           assert len(swig) - len(swig.rstrip("\\\\")) == 1, repr(swig)
