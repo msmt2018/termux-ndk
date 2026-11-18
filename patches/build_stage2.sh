@@ -30,6 +30,7 @@ export TERMUX_NDK_SYSROOT
 PYTHON_HOST_ROOT="${PYTHON_HOST_ROOT:-${LLVM_ROOT}/prebuilts/python/linux-x86}"
 PYTHON_TARGET_ROOT="${PYTHON_TARGET_ROOT:-${LLVM_ROOT}/out/python-${MUSL_TRIPLE}-install}"
 SWIG_HOST_EXECUTABLE="${SWIG_HOST_EXECUTABLE:-${LLVM_ROOT}/out/host-tools/swig-install/bin/swig}"
+LLVM_NATIVE_TOOL_DIR="${LLVM_NATIVE_TOOL_DIR:-${LLVM_ROOT}/out/native-tools-build/bin}"
 
 # Cross-compilation is determined from the actual build machine, not inferred
 # from the output directory name. Zig wrappers must already target HOST_ARCH.
@@ -37,9 +38,17 @@ BUILD_MACHINE="$(uname -m)"
 case "${BUILD_MACHINE}:${HOST_ARCH}" in
     x86_64:x86_64|aarch64:aarch64|armv7l:armv7|armv8l:armv7)
         CMAKE_CROSSCOMPILING=FALSE
+        NATIVE_TOOL_ARGS=()
         ;;
     *)
         CMAKE_CROSSCOMPILING=TRUE
+        for native_tool in llvm-tblgen clang-tblgen lldb-tblgen; do
+            if [[ ! -x "${LLVM_NATIVE_TOOL_DIR}/${native_tool}" ]]; then
+                echo "error: missing native ${native_tool}; run bash patches/build_native_tools.sh first" >&2
+                exit 8
+            fi
+        done
+        NATIVE_TOOL_ARGS=("-DLLVM_NATIVE_TOOL_DIR=${LLVM_NATIVE_TOOL_DIR}")
         ;;
 esac
 
@@ -101,6 +110,7 @@ echo "Dependency prefix        : ${DEPS_PREFIX}"
 echo "Python host runtime      : ${PYTHON_HOST_ROOT}"
 echo "Python target library    : ${PYTHON_TARGET_ROOT}"
 echo "Native SWIG executable   : ${SWIG_HOST_EXECUTABLE}"
+echo "Native TableGen tools    : ${LLVM_NATIVE_TOOL_DIR}"
 echo "Build directory          : ${BUILD_DIR}"
 echo "Install prefix           : ${INSTALL_PREFIX}"
 echo "Cross compiling          : ${CMAKE_CROSSCOMPILING}"
@@ -117,7 +127,8 @@ cmake -G Ninja \
     -DCMAKE_C_FLAGS='-static -fPIC -Wno-unused-command-line-argument -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
     -DCMAKE_CXX_FLAGS='-static -fPIC -Wno-unused-command-line-argument -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
     -DCMAKE_EXE_LINKER_FLAGS='-static -fuse-ld=lld -Wl,--hash-style=both' \
-    -DLLVM_TARGETS_TO_BUILD='AArch64;ARM;X86' \
+    -DLLVM_TARGETS_TO_BUILD='AArch64;ARM;X86' \\
+    ${NATIVE_TOOL_ARGS[@]} \\
     -DLLVM_ENABLE_PROJECTS='bolt;clang;clang-tools-extra;lld;lldb;polly' \
     -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
     -DCMAKE_INSTALL_LIBDIR=lib \
