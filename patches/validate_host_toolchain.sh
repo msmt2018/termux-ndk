@@ -74,9 +74,14 @@ for binary in "${TMP_DIR}/smoke-c" "${TMP_DIR}/smoke-cxx"; do
         exit 8
     }
     if readelf -l "${binary}" | grep -q 'INTERP'; then
-        echo "error: ${binary} is dynamically linked; static-musl host tools must not require an ELF interpreter" >&2
+        echo "error: ${binary} has a PT_INTERP program header" >&2
         readelf -l "${binary}" >&2
         exit 9
+    fi
+    if readelf -d "${binary}" 2>/dev/null | grep -q '(NEEDED)'; then
+        echo "error: ${binary} still has dynamic shared-library dependencies" >&2
+        readelf -d "${binary}" >&2
+        exit 10
     fi
 done
 
