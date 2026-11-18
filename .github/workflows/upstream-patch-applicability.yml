@@ -46,6 +46,7 @@ jobs:
             --branch mirror-goog-llvm-r563880-release \
             https://android.googlesource.com/toolchain/llvm_android \
             /tmp/aosp/toolchain/llvm_android
+          git -C /tmp/aosp/toolchain/llvm_android checkout 19756bd1d4ffca122636e553ab43b4befe827183
 
       - name: Check and apply LLVM Android patches
         env:
