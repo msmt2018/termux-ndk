@@ -29,7 +29,7 @@ The `multi-host-architecture-patches` branch contains:
 - a static C/C++ compiler smoke-test gate with ELF architecture and interpreter checks;
 - a shared host environment selector for consistent host tags, triples, and sysroots;
 - NDK host-tag detection for x86_64, Android ARM64, and Android ARMv7;
-- LLVM Musl host configuration variants and automated workflows that apply the six architecture patch sets to pinned AOSP source trees and compile the modified Python modules.
+- shared environment-driven LLVM and NDK Musl host patches, validated in separate clean AOSP source trees for all three architecture selections.
 
 These are source-level changes. The three compiler wrappers, architecture-specific sysroots and dependency archives still need to be built and tested. Full NDK integration, all-four-ABI application builds, and on-device Termux/proot runtime tests have not yet passed. No release archive is claimed to be ready.
 
