@@ -70,6 +70,7 @@ The following inputs must be built separately for each host architecture:
 - A build-machine-native Python executable under `PYTHON_HOST_ROOT`.
 - A target-architecture `libpython3.12.a` and headers under `PYTHON_TARGET_ROOT`.
 - A build-machine-native SWIG executable under `SWIG_HOST_EXECUTABLE`.
+- For cross builds, native `llvm-tblgen`, `clang-tblgen`, and `lldb-tblgen` executables. Build these first with `bash patches/build_native_tools.sh`; set `LLVM_NATIVE_TOOL_DIR` if the output is elsewhere.
 
 The native Python executable and target Python archive are intentionally separate. An x86_64 Python static library must never be linked into an ARM64 or ARMv7 executable.
 
@@ -88,7 +89,8 @@ A successful cross-compile plus ELF inspection is not a substitute for executing
 - The Stage2 entry point is architecture-parameterized.
 - LLVM and NDK host selection now use one shared static-musl configuration instead of mixing Android/Bionic triples with Musl sysroots.
 - The malformed LLVM base-builder patch hunk has been corrected.
-- The upstream patch-applicability workflow tests all three architecture selections against clean AOSP source checkouts.
+- The upstream patch-applicability workflow passed for all three architecture selections: [run 44298980789](https://github.com/msmt2018/termux-ndk/actions/runs/44298980789). It applied the NDK and LLVM Android patches to clean AOSP checkouts, compiled the modified Python modules, and exercised NDK host-tag / host-triple selection.
+- The shell validation workflow passed Bash syntax, ShellCheck, unified-diff hunk counts, and host selector checks: [run 44299210514](https://github.com/msmt2018/termux-ndk/actions/runs/44299210514).
 - Compiler wrappers, per-architecture sysroots, Python target libraries, SWIG host tool, and dependency archives still need to exist before Stage2 can configure and build.
 - No full LLVM Stage2 build, NDK integration build, all-four-ABI sample build, or real-device runtime test is claimed as passed.
 
