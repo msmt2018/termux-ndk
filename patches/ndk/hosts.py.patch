@@ -1,6 +1,6 @@
 --- a/ndk/hosts.py
 +++ b/ndk/hosts.py
-@@ -21,5 +21,6 @@
+@@ -21,6 +21,7 @@
  from __future__ import absolute_import
  
  import enum
@@ -8,7 +8,7 @@
  import sys
  
  
-@@ -46,9 +47,9 @@ def get_host_tag() -> str:
+@@ -46,5 +46,8 @@ def get_host_tag() -> str:
  def get_host_tag() -> str:
      """Returns the host tag used for testing on the current host."""
 +    if sys.platform.startswith('linux'):
@@ -17,7 +17,7 @@
          return 'darwin-x86_64'
      elif sys.platform == 'win32':
          return 'windows-x86_64'
-@@ -67,6 +66,20 @@ def host_to_tag(host: Host) -> str:
+@@ -67,5 +70,25 @@ def host_to_tag(host: Host) -> str:
      'windows-x86_64'
      """
 +    if host == Host.Linux:
