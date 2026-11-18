@@ -36,6 +36,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           bash -n patches/build_stage2.sh
+          bash -n patches/fetch_upstream_sources.sh
           bash -n patches/resolve_python_version.sh
           bash -n patches/build_native_tools.sh
           bash -n patches/build_all_hosts.sh
@@ -76,7 +77,21 @@ jobs:
 
       - name: Run ShellCheck
         run: |
-          shellcheck --severity=error patches/build_stage2.sh patches/resolve_python_version.sh patches/build_native_tools.sh patches/build_all_hosts.sh patches/validate_host_toolchain.sh patches/host-env.sh patches/validate_stage2_install.sh patches/validate_stage2_inputs.sh
+          shellcheck --severity=error patches/fetch_upstream_sources.sh patches/build_stage2.sh patches/resolve_python_version.sh patches/build_native_tools.sh patches/build_all_hosts.sh patches/validate_host_toolchain.sh patches/host-env.sh patches/validate_stage2_install.sh patches/validate_stage2_inputs.sh
+
+      - name: Validate pinned upstream source revisions
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          source patches/upstream-revisions.lock
+          test "${CLANG_RELEASE}" = "r563880"
+          test "${LLVM_PROJECT_REVISION}" = "386af4a5c64ab75eaee2448dc38f2e34a40bfed0"
+          test "${LLVM_ANDROID_REVISION}" = "19756bd1d4ffca122636e553ab43b4befe827183"
+          test "${NDK_REVISION}" = "c4bdd155116a9b42767534b35e93f83a91e4a06f"
+          test "${#LLVM_PROJECT_REVISION}" -eq 40
+          test "${#LLVM_ANDROID_REVISION}" -eq 40
+          test "${#NDK_REVISION}" -eq 40
+          echo "PASS: immutable r563880 source revisions are pinned"
 
       - name: Validate unified diff hunk counts
         run: python3 patches/validate_patch_hunks.py
