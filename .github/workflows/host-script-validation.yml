@@ -40,6 +40,7 @@ jobs:
           bash -n patches/validate_host_toolchain.sh
           bash -n patches/host-env.sh
           bash -n patches/validate_stage2_install.sh
+          bash -n patches/validate_stage2_inputs.sh
           python3 - <<'PY'
           from pathlib import Path
           text = Path("patches/build_stage2.sh").read_text()
@@ -58,10 +59,36 @@ jobs:
 
       - name: Run ShellCheck
         run: |
-          shellcheck --severity=error patches/build_stage2.sh patches/build_native_tools.sh patches/validate_host_toolchain.sh patches/host-env.sh patches/validate_stage2_install.sh
+          shellcheck --severity=error patches/build_stage2.sh patches/build_native_tools.sh patches/validate_host_toolchain.sh patches/host-env.sh patches/validate_stage2_install.sh patches/validate_stage2_inputs.sh
 
       - name: Validate unified diff hunk counts
         run: python3 patches/validate_patch_hunks.py
+
+      - name: Test static archive architecture validation
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          temp="$(mktemp -d)"
+          trap 'rm -rf "$temp"' EXIT
+          mkdir -p "$temp/deps" "$temp/python/lib"
+          printf 'int archive_probe(void) { return 0; }\n' > "$temp/probe.c"
+          cc -c "$temp/probe.c" -o "$temp/probe.o"
+          ar rcs "$temp/probe.a" "$temp/probe.o"
+          triple="x86_64-unknown-linux-musl"
+          for name in libz libxml2 libzstd liblzma libedit; do
+            mkdir -p "$temp/deps/$name-$triple-install/lib"
+            cp "$temp/probe.a" "$temp/deps/$name-$triple-install/lib/$name.a"
+          done
+          mkdir -p "$temp/deps/libncurses-$triple-install/lib"
+          for name in libncurses libform libpanel; do
+            cp "$temp/probe.a" "$temp/deps/libncurses-$triple-install/lib/$name.a"
+          done
+          cp "$temp/probe.a" "$temp/python/lib/libpython3.12.a"
+          HOST_ARCH=x86_64 DEPS_PREFIX="$temp/deps" PYTHON_TARGET_ROOT="$temp/python" bash patches/validate_stage2_inputs.sh
+          if HOST_ARCH=aarch64 DEPS_PREFIX="$temp/deps" PYTHON_TARGET_ROOT="$temp/python" bash patches/validate_stage2_inputs.sh; then
+            echo "validator accepted x86_64 archives for AArch64" >&2
+            exit 1
+          fi
 
       - name: Check host environment mappings
         shell: bash
