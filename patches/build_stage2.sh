@@ -42,7 +42,8 @@ BUILD_DIR="${BUILD_DIR:-${LLVM_ROOT}/out/stage2-build-${HOST_ARCH}}"
 INSTALL_PREFIX="${INSTALL_PREFIX:-${LLVM_ROOT}/out/stage2-install-${HOST_ARCH}}"
 DEPS_PREFIX="${DEPS_PREFIX:-${LLVM_ROOT}/out/lib}"
 SYSROOT="${SYSROOT:-${LLVM_ROOT}/prebuilts/build-tools/sysroots/${MUSL_TRIPLE}}"
-PYTHON_ROOT="${PYTHON_ROOT:-${LLVM_ROOT}/prebuilts/python/linux-x86}"
+PYTHON_HOST_ROOT="${PYTHON_HOST_ROOT:-${LLVM_ROOT}/prebuilts/python/linux-x86}"
+PYTHON_TARGET_ROOT="${PYTHON_TARGET_ROOT:-${LLVM_ROOT}/out/python-${MUSL_TRIPLE}-install}"
 
 # Cross-compilation is determined from the actual build machine, not inferred
 # from the output directory name. Zig wrappers must already target HOST_ARCH.
@@ -62,7 +63,7 @@ for tool in cc c++ ld objcopy ar ranlib strip; do
         exit 3
     fi
 done
-for required in "${LLVM_SRC_DIR}/CMakeLists.txt" "${SYSROOT}" "${PYTHON_ROOT}/bin/python3.12" "${PYTHON_ROOT}/lib/libpython3.12.a" "${PYTHON_ROOT}/include/python3.12"; do
+for required in "${LLVM_SRC_DIR}/CMakeLists.txt" "${SYSROOT}" "${PYTHON_HOST_ROOT}/bin/python3.12" "${PYTHON_TARGET_ROOT}/lib/libpython3.12.a" "${PYTHON_TARGET_ROOT}/include/python3.12"; do
     if [[ ! -e "${required}" ]]; then
         echo "error: required stage2 input does not exist: ${required}" >&2
         exit 4
@@ -95,6 +96,9 @@ for required in "${DEPENDENCY_INPUTS[@]}"; do
     fi
 done
 
+command -v cmake >/dev/null 2>&1 || { echo "error: cmake is required" >&2; exit 6; }
+command -v ninja >/dev/null 2>&1 || { echo "error: ninja is required" >&2; exit 6; }
+
 mkdir -p "${BUILD_DIR}" "${INSTALL_PREFIX}"
 cd "${BUILD_DIR}"
 
@@ -103,6 +107,8 @@ echo "Musl runtime triple      : ${MUSL_TRIPLE}"
 echo "Zig wrapper              : ${TOOLCHAIN}"
 echo "Sysroot                  : ${SYSROOT}"
 echo "Dependency prefix        : ${DEPS_PREFIX}"
+echo "Python host runtime      : ${PYTHON_HOST_ROOT}"
+echo "Python target library    : ${PYTHON_TARGET_ROOT}"
 echo "Build directory          : ${BUILD_DIR}"
 echo "Install prefix           : ${INSTALL_PREFIX}"
 echo "Cross compiling          : ${CMAKE_CROSSCOMPILING}"
@@ -177,11 +183,11 @@ cmake -G Ninja \
     -DLLVM_ENABLE_THREADS=ON \
     -DLLVM_VERSION_SUFFIX= \
     -DLLVM_PROFDATA_FILE=$HOME/proj/llvm-toolchain/out/r563880.profdata \
-    -DPython3_LIBRARY=${PYTHON_ROOT}/lib/libpython3.12.a \
-    -DPython3_LIBRARIES=${PYTHON_ROOT}/lib/libpython3.12.a \
-    -DPython3_INCLUDE_DIR=${PYTHON_ROOT}/include/python3.12 \
-    -DPython3_INCLUDE_DIRS=${PYTHON_ROOT}/include/python3.12 \
-    -DPython3_EXECUTABLE=${PYTHON_ROOT}/bin/python3.12 \
+    -DPython3_LIBRARY=${PYTHON_TARGET_ROOT}/lib/libpython3.12.a \
+    -DPython3_LIBRARIES=${PYTHON_TARGET_ROOT}/lib/libpython3.12.a \
+    -DPython3_INCLUDE_DIR=${PYTHON_TARGET_ROOT}/include/python3.12 \
+    -DPython3_INCLUDE_DIRS=${PYTHON_TARGET_ROOT}/include/python3.12 \
+    -DPython3_EXECUTABLE=${PYTHON_HOST_ROOT}/bin/python3.12 \
     -DZLIB_INCLUDE_DIR=${DEPS_PREFIX}/libz-${MUSL_TRIPLE}-install/include \
     -DZLIB_LIBRARY=${DEPS_PREFIX}/libz-${MUSL_TRIPLE}-install/lib/libz.a \
     -DLIBXML2_INCLUDE_DIR=${DEPS_PREFIX}/libxml2-${MUSL_TRIPLE}-install/include/libxml2 \
