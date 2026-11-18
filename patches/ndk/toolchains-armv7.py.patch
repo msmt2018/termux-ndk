@@ -1,34 +1,46 @@
 --- a/ndk/toolchains.py
 +++ b/ndk/toolchains.py
-@@ -26,5 +26,6 @@
+@@ -21,4 +21,5 @@
+ import subprocess
++import os
+ from pathlib import Path
+ from typing import List
+ 
+@@ -31,5 +32,5 @@
  HOST_TRIPLE_MAP = {
      Host.Darwin: "x86_64-apple-darwin",
 -    Host.Linux: "x86_64-linux-gnu",
-+    # Android 32-bit ARM host tools; use the ARMv7 Android ABI.
-+    Host.Linux: "armv7a-linux-androideabi21",
++    Host.Linux: "arm-unknown-linux-musleabihf",
      Host.Windows64: "x86_64-w64-mingw32",
  }
-@@ -224,5 +224,5 @@
+@@ -208,1 +208,3 @@
+-        lib_dirs = [
++        if self.target == Host.Linux:
++            return [self.sysroot / "lib", self.sysroot / "usr/lib"]
++        lib_dirs = [
+@@ -241,3 +243,6 @@
          if self.target == Host.Linux:
-             return (
-                 ndk.paths.ANDROID_DIR
--                / "prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8"
-+                / "prebuilts/clang/host/linux-x86" / CLANG_VERSION
-             )
-@@ -243,6 +243,6 @@
-         """Returns the GCC triple for the host toolchain."""
-         return {
-             Host.Darwin: "x86_64-apple-darwin11",
+-            return self.path / "sysroot"
++            sysroot = os.environ.get("TERMUX_NDK_SYSROOT")
++            if not sysroot:
++                raise RuntimeError("TERMUX_NDK_SYSROOT must point to the selected static-musl sysroot")
++            return Path(sysroot)
+         return self.path / self.triple
+@@ -250,1 +255,1 @@
 -            Host.Linux: "x86_64-linux",
-+            Host.Linux: "arm-linux-androideabi",
-             Host.Windows64: "x86_64-w64-mingw32",
-         }[self.target]
-@@ -317,6 +317,8 @@
++            Host.Linux: "arm-unknown-linux-musleabihf",
+@@ -312,5 +317,5 @@
+         if self.target.is_windows:
+             lib_dirs.append(self.path_for_host(self.target) / "lib64")
+-        else:
++        elif self.target != Host.Linux:
+             lib_dirs.append(self.path / "lib64")
+         return lib_dirs
+@@ -319,6 +324,8 @@
+         host_triple = HOST_TRIPLE_MAP[self.target]
          flags = [
              f"--target={host_triple}",
          ]
-+        flags.append("-fcolor-diagnostics")
-+        flags.append("-march=armv7-a")
+         flags.append("-fcolor-diagnostics")
+        flags.append("-march=armv7-a")
  
-         if self.target.is_windows:
-             flags.append("-I" + str(self.path_for_host(self.target) / "include/c++/v1"))
