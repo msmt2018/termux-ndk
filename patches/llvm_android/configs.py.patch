@@ -3,15 +3,28 @@
 @@ -24,3 +24,4 @@
  import functools
  import json
++import os
 +import platform
  
 @@ -431,5 +432,19 @@ class LinuxMuslHostConfig(LinuxMuslConfig):
      """Config for Musl as the host"""
 -    def __init__(self, arch: hosts.Arch = hosts.Arch.X86_64):
 -        super().__init__(arch=arch, is_cross_compiling=False)
-+    def __init__(self, arch: hosts.Arch = hosts.Arch.AARCH64):
-+        # LinuxMuslHostConfig assumes a native build. This fork also
-+        # cross-builds Android host executables on x86_64 CI runners.
++    def __init__(self, arch: Optional[hosts.Arch] = None):
++        # Select the host executable architecture independently from the
++        # machine running the build. CI may cross-build any supported host.
++        if arch is None:
++            selected = os.environ.get('TERMUX_NDK_HOST_ARCH', 'aarch64').lower()
++            arch = {
++                'aarch64': hosts.Arch.AARCH64,
++                'arm64': hosts.Arch.AARCH64,
++                'x86_64': hosts.Arch.X86_64,
++                'amd64': hosts.Arch.X86_64,
++                'armv7': hosts.Arch.ARM,
++                'arm': hosts.Arch.ARM,
++            }.get(selected)
++            if arch is None:
++                raise RuntimeError('Unsupported TERMUX_NDK_HOST_ARCH: {}'.format(selected))
 +        machine = platform.machine().lower()
 +        build_arch = {
 +            'x86_64': hosts.Arch.X86_64,
