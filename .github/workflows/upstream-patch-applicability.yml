@@ -83,3 +83,15 @@ jobs:
           sed -n '310,340p' ndk/toolchains.py
           patch -p1 < "$GITHUB_WORKSPACE/patches/ndk/${{ matrix.toolchain_patch }}" || { cat ndk/toolchains.py.rej; exit 1; }
           python3 -m py_compile ndk/hosts.py ndk/toolchains.py
+          python3 - <<'PY'
+          import os
+          from ndk.hosts import Host, host_to_tag
+
+          for tag in ("linux-x86_64", "android-arm64", "android-armv7"):
+              os.environ["TERMUX_NDK_HOST_TAG"] = tag
+              assert host_to_tag(Host.Linux) == tag, tag
+
+          os.environ.pop("TERMUX_NDK_HOST_TAG", None)
+          assert host_to_tag(Host.Linux) == "linux-x86_64"
+          print("PASS: NDK host tag override and x86_64 auto-detection")
+          PY
