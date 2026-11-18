@@ -45,7 +45,7 @@ PYTHON_HOST_VERSION_OUTPUT="$("${PYTHON_HOST_EXECUTABLE}" --version 2>&1)" || {
     echo "error: cannot execute native Python: ${PYTHON_HOST_EXECUTABLE}" >&2
     return 8
 }
-if [[ ! "${PYTHON_HOST_VERSION_OUTPUT}" =~ ^Python[[:space:]]+${PYTHON_VERSION//./\\.}([[:space:]]|$) ]]; then
+if [[ ! "${PYTHON_HOST_VERSION_OUTPUT}" =~ ^Python[[:space:]]+${PYTHON_VERSION//./\\.}([.][0-9]+)?([[:space:]]|$) ]]; then
     echo "error: Python executable/header version mismatch: expected ${PYTHON_VERSION}, got '${PYTHON_HOST_VERSION_OUTPUT}'" >&2
     return 9
 fi
