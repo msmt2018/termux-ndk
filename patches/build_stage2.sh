@@ -12,6 +12,8 @@ set -Eeuo pipefail
 # Each HOST_ARCH requires its own Zig wrapper, sysroot and dependency archives.
 # Keep the three builds in separate build/install directories.
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
 HOST_ARCH="${HOST_ARCH:-aarch64}"
 case "${HOST_ARCH}" in
     aarch64)
@@ -98,6 +100,11 @@ done
 
 command -v cmake >/dev/null 2>&1 || { echo "error: cmake is required" >&2; exit 6; }
 command -v ninja >/dev/null 2>&1 || { echo "error: ninja is required" >&2; exit 6; }
+
+# Verify the selected wrapper really emits static ELF binaries for this
+# architecture; directory names and -dumpmachine alone are not sufficient.
+HOST_ARCH="${HOST_ARCH}" TOOLCHAIN="${TOOLCHAIN}" SYSROOT="${SYSROOT}" \\
+    "${SCRIPT_DIR}/validate_host_toolchain.sh"
 
 mkdir -p "${BUILD_DIR}" "${INSTALL_PREFIX}"
 cd "${BUILD_DIR}"
