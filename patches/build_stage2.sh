@@ -15,6 +15,20 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 HOST_ARCH="${HOST_ARCH:-aarch64}"
+LLVM_ROOT="${LLVM_ROOT:-$HOME/proj/llvm-toolchain}"
+# This is the single source of truth for host tags, triples and sysroot paths.
+source "${SCRIPT_DIR}/host-env.sh" "${HOST_ARCH}"
+
+MUSL_TRIPLE="${TERMUX_NDK_HOST_TRIPLE}"
+TOOLCHAIN="$HOME/opt/zig-as-llvm-x86_64" ./build_stage2.sh
+#   HOST_ARCH=armv7 TOOLCHAIN="$HOME/opt/zig-as-llvm-armv7" ./build_stage2.sh
+#
+# Each HOST_ARCH requires its own Zig wrapper, sysroot and dependency archives.
+# Keep the three builds in separate build/install directories.
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+HOST_ARCH="${HOST_ARCH:-aarch64}"
 case "${HOST_ARCH}" in
     aarch64)
         MUSL_TRIPLE="aarch64-unknown-linux-musl"
@@ -43,7 +57,9 @@ LLVM_SRC_DIR="${LLVM_SRC_DIR:-${LLVM_ROOT}/out/llvm-project/llvm}"
 BUILD_DIR="${BUILD_DIR:-${LLVM_ROOT}/out/stage2-build-${HOST_ARCH}}"
 INSTALL_PREFIX="${INSTALL_PREFIX:-${LLVM_ROOT}/out/stage2-install-${HOST_ARCH}}"
 DEPS_PREFIX="${DEPS_PREFIX:-${LLVM_ROOT}/out/lib}"
-SYSROOT="${SYSROOT:-${LLVM_ROOT}/prebuilts/build-tools/sysroots/${MUSL_TRIPLE}}"
+SYSROOT="${SYSROOT:-${TERMUX_NDK_SYSROOT}}"
+TERMUX_NDK_SYSROOT="${SYSROOT}"
+export TERMUX_NDK_SYSROOT
 PYTHON_HOST_ROOT="${PYTHON_HOST_ROOT:-${LLVM_ROOT}/prebuilts/python/linux-x86}"
 PYTHON_TARGET_ROOT="${PYTHON_TARGET_ROOT:-${LLVM_ROOT}/out/python-${MUSL_TRIPLE}-install}"
 
