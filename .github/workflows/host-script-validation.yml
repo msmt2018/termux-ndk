@@ -40,6 +40,16 @@ jobs:
           bash -n patches/validate_host_toolchain.sh
           bash -n patches/host-env.sh
           bash -n patches/validate_stage2_install.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path("patches/build_stage2.sh").read_text()
+          lines = text.splitlines()
+          swig = next(line for line in lines if "-DSWIG_EXECUTABLE=" in line)
+          assert len(swig) - len(swig.rstrip("\\\\")) == 1, repr(swig)
+          for option in ("-DLLVM_ENABLE_TERMINFO=ON", "-DLLVM_ENABLE_LIBEDIT=ON", "-DLLVM_ENABLE_LIBXML2=ON"):
+              assert option in text, option
+          print("PASS: Stage2 CMake continuation and LLDB dependency feature gates")
+          PY
 
       - name: Install ShellCheck
         run: |
