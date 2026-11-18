@@ -25,7 +25,7 @@ Apply one architecture variant to a clean upstream source tree. Do not apply mul
 
 Common NDK patch:
 
-- `patches/ndk/hosts.py.patch`: selects `linux-x86_64`, `android-arm64`, or `android-armv7` using `TERMUX_NDK_HOST_TAG` or the actual Linux machine architecture.
+- `patches/ndk/hosts.py.patch`: selects `linux-x86_64`, `android-arm64`, or `android-armv7` using `TERMUX_NDK_HOST_TAG` or the Linux machine architecture plus process pointer width (so a 32-bit ARM process on a 64-bit ARM kernel selects `android-armv7`).
 
 Architecture-specific NDK patch:
 
