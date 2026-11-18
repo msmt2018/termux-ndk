@@ -191,3 +191,14 @@ source patches/host-env.sh aarch64
 ```
 
 Override `LLVM_ROOT` or `TERMUX_NDK_SYSROOT` before sourcing when the build workspace uses non-default locations. The NDK toolchain patch verifies that the selected sysroot directory exists.
+
+
+## Build-machine tools versus target-architecture libraries
+
+Stage2 now distinguishes the tools that must execute during the build from libraries that are linked into the target host binaries:
+
+- `Python3_EXECUTABLE` is the build-machine-native Python interpreter; `Python3_LIBRARY` and headers are for the selected target architecture.
+- `SWIG_EXECUTABLE` is now a build-machine-native executable, configured through `SWIG_HOST_EXECUTABLE` (default: `out/host-tools/swig-install/bin/swig`). A SWIG binary built for the target architecture cannot be executed by an x86_64 CI runner.
+- Zlib, LibXml2, Zstd, LZMA, LibEdit, Curses and Python static libraries remain target-architecture inputs.
+
+One cross-build bootstrap issue remains open: LLVM/Clang/LLDB TableGen executables are also build-time host tools. The current Stage2 script has not yet established a verified native TableGen bootstrap path for cross-building AArch64 and ARMv7 from x86_64. Do not treat the cross-architecture Stage2 build as complete until the native TableGen tools are provided or the upstream LLVM build's host-tool bootstrap is verified.
