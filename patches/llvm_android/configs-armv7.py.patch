@@ -1,6 +1,6 @@
 --- a/toolchain/llvm_android/configs.py
 +++ b/toolchain/llvm_android/configs.py
-@@ -295,22 +295,24 @@
+@@ -295,22 +295,22 @@
      """Configuration for Linux targets."""
  
      target_os: hosts.Host = hosts.Host.Linux
@@ -19,7 +19,7 @@
      @property
      def llvm_triple(self) -> str:
 -        return 'i386-unknown-linux-gnu' if self.is_32_bit else 'x86_64-unknown-linux-gnu'
-+        return 'arm-unknown-linux-androideabi' if self.is_32_bit else 'arm-unknown-linux-androideabi'
++        return 'arm-unknown-linux-androideabi'
  
      @property
      def cflags(self) -> List[str]:
