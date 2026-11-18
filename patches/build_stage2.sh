@@ -62,10 +62,36 @@ for tool in cc c++ ld objcopy ar ranlib strip; do
         exit 3
     fi
 done
-for required in "${LLVM_SRC_DIR}/CMakeLists.txt" "${SYSROOT}" "${PYTHON_ROOT}/bin/python3.12"; do
+for required in "${LLVM_SRC_DIR}/CMakeLists.txt" "${SYSROOT}" "${PYTHON_ROOT}/bin/python3.12" "${PYTHON_ROOT}/lib/libpython3.12.a" "${PYTHON_ROOT}/include/python3.12"; do
     if [[ ! -e "${required}" ]]; then
         echo "error: required stage2 input does not exist: ${required}" >&2
         exit 4
+    fi
+done
+
+# Fail before CMake configuration if any architecture-specific static
+# dependency has not been built and installed for this exact musl triple.
+DEPENDENCY_INPUTS=(
+    "${DEPS_PREFIX}/libz-${MUSL_TRIPLE}-install/include"
+    "${DEPS_PREFIX}/libz-${MUSL_TRIPLE}-install/lib/libz.a"
+    "${DEPS_PREFIX}/libxml2-${MUSL_TRIPLE}-install/include/libxml2"
+    "${DEPS_PREFIX}/libxml2-${MUSL_TRIPLE}-install/lib/libxml2.a"
+    "${DEPS_PREFIX}/libzstd-${MUSL_TRIPLE}-install/include"
+    "${DEPS_PREFIX}/libzstd-${MUSL_TRIPLE}-install/lib/libzstd.a"
+    "${DEPS_PREFIX}/swig-${MUSL_TRIPLE}-install/bin/swig"
+    "${DEPS_PREFIX}/liblzma-${MUSL_TRIPLE}-install/include"
+    "${DEPS_PREFIX}/liblzma-${MUSL_TRIPLE}-install/lib/liblzma.a"
+    "${DEPS_PREFIX}/libedit-${MUSL_TRIPLE}-install/include"
+    "${DEPS_PREFIX}/libedit-${MUSL_TRIPLE}-install/lib/libedit.a"
+    "${DEPS_PREFIX}/libncurses-${MUSL_TRIPLE}-install/include"
+    "${DEPS_PREFIX}/libncurses-${MUSL_TRIPLE}-install/lib/libncurses.a"
+    "${DEPS_PREFIX}/libncurses-${MUSL_TRIPLE}-install/lib/libform.a"
+    "${DEPS_PREFIX}/libncurses-${MUSL_TRIPLE}-install/lib/libpanel.a"
+)
+for required in "${DEPENDENCY_INPUTS[@]}"; do
+    if [[ ! -e "${required}" ]]; then
+        echo "error: missing ${HOST_ARCH} dependency: ${required}" >&2
+        exit 5
     fi
 done
 
@@ -82,14 +108,14 @@ echo "Install prefix           : ${INSTALL_PREFIX}"
 echo "Cross compiling          : ${CMAKE_CROSSCOMPILING}"
 
 cmake -G Ninja \
-    -DCMAKE_C_COMPILER=$TOOLCHAIN/bin/cc \
-    -DCMAKE_CXX_COMPILER=$TOOLCHAIN/bin/c++ \
-    -DCMAKE_ASM_COMPILER=$TOOLCHAIN/bin/cc \
-    -DCMAKE_LINKER=$TOOLCHAIN/bin/ld \
-    -DCMAKE_OBJCOPY=$TOOLCHAIN/bin/objcopy \
-    -DCMAKE_AR=$TOOLCHAIN/bin/ar \
-    -DCMAKE_RANLIB=$TOOLCHAIN/bin/ranlib \
-    -DCMAKE_STRIP=$TOOLCHAIN/bin/strip \
+    -DCMAKE_C_COMPILER="${TOOLCHAIN}/bin/cc" \
+    -DCMAKE_CXX_COMPILER="${TOOLCHAIN}/bin/c++" \
+    -DCMAKE_ASM_COMPILER="${TOOLCHAIN}/bin/cc" \
+    -DCMAKE_LINKER="${TOOLCHAIN}/bin/ld" \
+    -DCMAKE_OBJCOPY="${TOOLCHAIN}/bin/objcopy" \
+    -DCMAKE_AR="${TOOLCHAIN}/bin/ar" \
+    -DCMAKE_RANLIB="${TOOLCHAIN}/bin/ranlib" \
+    -DCMAKE_STRIP="${TOOLCHAIN}/bin/strip" \
     -DCMAKE_C_FLAGS='-static -fPIC -Wno-unused-command-line-argument -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
     -DCMAKE_CXX_FLAGS='-static -fPIC -Wno-unused-command-line-argument -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
     -DCMAKE_EXE_LINKER_FLAGS='-static -fuse-ld=lld -Wl,--hash-style=both' \
