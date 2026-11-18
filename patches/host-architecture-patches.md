@@ -76,3 +76,40 @@ Do not mix the two routes in one build. In particular, do not change only `toolc
 - The existing AArch64 path is the only current implementation baseline; it must also pass the same ABI audit before being treated as release-ready.
 
 The next implementation step is to choose one runtime route, then parameterize the entire stage2 dependency graph and host configuration around it. The required build inputs are the per-architecture compiler wrapper, sysroot, dependency install prefix, runtime triple, and output directory; these must all agree.
+
+
+## Stage2 parameterization added
+
+`patches/build_stage2.sh` now accepts one architecture per invocation:
+
+| `HOST_ARCH` | Static-musl runtime triple | Default Zig wrapper |
+|---|---|---|
+| `aarch64` | `aarch64-unknown-linux-musl` | `$HOME/opt/zig-as-llvm` |
+| `x86_64` | `x86_64-unknown-linux-musl` | `$HOME/opt/zig-as-llvm-x86_64` |
+| `armv7` | `arm-unknown-linux-musleabihf` | `$HOME/opt/zig-as-llvm-armv7` |
+
+Each invocation uses a separate build directory and install prefix. The script now parameterizes the LLVM runtime triple, sysroot, dependency install paths, compiler wrapper, Python paths, and CMake processor. It also fails early when architecture-specific dependencies are missing.
+
+Example invocations:
+
+```bash
+HOST_ARCH=aarch64 ./patches/build_stage2.sh
+HOST_ARCH=x86_64 ./patches/build_stage2.sh
+HOST_ARCH=armv7 ./patches/build_stage2.sh
+```
+
+The following inputs must exist for each architecture before stage2 can configure:
+
+- A Zig wrapper at `TOOLCHAIN/bin/{cc,c++,ld,objcopy,ar,ranlib,strip}` that actually targets the selected architecture.
+- The matching `prebuilts/build-tools/sysroots/$MUSL_TRIPLE` sysroot.
+- Matching static dependency installs under `out/lib/*-$MUSL_TRIPLE-install`.
+- A build-machine-native Python executable under `PYTHON_HOST_ROOT`.
+- A target-architecture `libpython3.12.a` and headers under `PYTHON_TARGET_ROOT`. The host Python executable and target Python library are intentionally separate; linking the x86_64 host Python archive into an ARM64 or ARMv7 executable would be an architecture mismatch.
+
+Override `TOOLCHAIN`, `SYSROOT`, `DEPS_PREFIX`, `PYTHON_HOST_ROOT`, `PYTHON_TARGET_ROOT`, `LLVM_ROOT`, `LLVM_SRC_DIR`, `BUILD_DIR`, or `INSTALL_PREFIX` when the build environment uses different locations.
+
+### Integration blocker still open
+
+Stage2 now follows the static-musl route, but the provisional `ndk/toolchains*.py.patch` and `llvm_android/configs*.py.patch` files still contain Android/Bionic triples. They have **not** yet been reconciled with the static-musl host-tool output. Do not run the complete NDK integration build by mixing these configurations. The next patching pass must align the NDK and llvm_android host configuration with the selected runtime ABI, or deliberately switch stage2 to a Bionic sysroot build.
+
+No architecture-specific stage2 build has been run yet. The parameterization is a source change, not evidence that the three compilers, dependency archives, or resulting executables are already available or working.
