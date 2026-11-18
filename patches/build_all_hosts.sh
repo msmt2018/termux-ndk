@@ -16,6 +16,9 @@ LLVM_ROOT="${LLVM_ROOT:-$HOME/proj/llvm-toolchain}"
 LLVM_SRC_DIR="${LLVM_SRC_DIR:-${LLVM_ROOT}/out/llvm-project/llvm}"
 DEPS_PREFIX="${DEPS_PREFIX:-${LLVM_ROOT}/out/lib}"
 PYTHON_HOST_ROOT="${PYTHON_HOST_ROOT:-${LLVM_ROOT}/prebuilts/python/linux-x86}"
+# Resolve once from the pinned AOSP prebuilt layout and export to every host.
+# shellcheck source=patches/resolve_python_version.sh
+source "${SCRIPT_DIR}/resolve_python_version.sh"
 SWIG_HOST_EXECUTABLE="${SWIG_HOST_EXECUTABLE:-${LLVM_ROOT}/out/host-tools/swig-install/bin/swig}"
 PROFDATA_FILE="${LLVM_PROFDATA_FILE:-${LLVM_ROOT}/out/r563880.profdata}"
 NATIVE_BUILD_DIR="${NATIVE_BUILD_DIR:-${LLVM_ROOT}/out/native-tools-build}"
@@ -67,12 +70,12 @@ preflight_host() (
 
     for required in \
         "${LLVM_SRC_DIR}/CMakeLists.txt" \
-        "${PYTHON_HOST_ROOT}/bin/python3.12" \
+        "${PYTHON_HOST_EXECUTABLE}" \
         "${SWIG_HOST_EXECUTABLE}" \
         "${PROFDATA_FILE}" \
         "${SYSROOT}" \
-        "${PYTHON_TARGET_ROOT}/include/python3.12" \
-        "${PYTHON_TARGET_ROOT}/lib/libpython3.12.a" \
+        "${PYTHON_TARGET_ROOT}/include/python${PYTHON_VERSION}" \
+        "${PYTHON_TARGET_ROOT}/lib/libpython${PYTHON_VERSION}.a" \
         "${DEPS_PREFIX}/libz-${TERMUX_NDK_HOST_TRIPLE}-install/include" \
         "${DEPS_PREFIX}/libxml2-${TERMUX_NDK_HOST_TRIPLE}-install/include/libxml2" \
         "${DEPS_PREFIX}/libzstd-${TERMUX_NDK_HOST_TRIPLE}-install/include" \
@@ -84,8 +87,8 @@ preflight_host() (
             exit 10
         }
     done
-    [[ -x "${PYTHON_HOST_ROOT}/bin/python3.12" ]] || {
-        echo "error: native Python is not executable: ${PYTHON_HOST_ROOT}/bin/python3.12" >&2
+    [[ -x "${PYTHON_HOST_EXECUTABLE}" ]] || {
+        echo "error: native Python is not executable: ${PYTHON_HOST_EXECUTABLE}" >&2
         exit 11
     }
     [[ -x "${SWIG_HOST_EXECUTABLE}" ]] || {
