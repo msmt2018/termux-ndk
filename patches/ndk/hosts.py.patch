@@ -9,7 +9,7 @@
  import sys
  
  
-@@ -67,6 +69,29 @@ def host_to_tag(host: Host) -> str:
+@@ -67,6 +69,30 @@ def host_to_tag(host: Host) -> str:
      'windows-x86_64'
      """
 +    if host == Host.Linux:
