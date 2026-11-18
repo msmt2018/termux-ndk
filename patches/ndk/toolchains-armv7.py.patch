@@ -36,7 +36,7 @@
 +        elif self.target != Host.Linux:
              lib_dirs.append(self.path / "lib64")
          return lib_dirs
-@@ -319,5 +324,7 @@
+@@ -319,5 +325,7 @@
          host_triple = HOST_TRIPLE_MAP[self.target]
          flags = [
              f"--target={host_triple}",
