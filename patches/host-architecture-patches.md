@@ -44,3 +44,35 @@ The existing unsuffixed patch files remain the AArch64 host variant.
 The current `patches/build_stage2.sh` is still hard-coded to `aarch64-unknown-linux-musl` and AArch64-specific dependency/sysroot paths. These patch sets only establish the NDK and llvm_android host-triple/configuration layer; they do **not** make stage2 multi-architecture yet. Stage2 must be parameterized separately for x86_64 and ARMv7, and the produced binaries must be checked with `readelf -h`, `readelf -l`, and runtime smoke tests on real Android devices / Termux and proot environments.
 
 Also verify the actual upstream source revision before applying: the patch context is based on the source layout represented by the repository's existing AArch64 patches. AOSP source revisions can change these contexts.
+
+
+## Runtime ABI gate: do not conflate Android triples with static-musl builds
+
+The patch matrix above is **provisional** until the runtime ABI is made consistent with the stage2 compiler configuration.
+
+The current `patches/build_stage2.sh` configures:
+
+- `CMAKE_SYSTEM_NAME=Linux`
+- a Zig-based compiler wrapper
+- `-static` compile/link flags
+- `*-unknown-linux-musl` as `LLVM_DEFAULT_TARGET_TRIPLE`, `LLVM_BUILTIN_TARGETS`, and `LLVM_RUNTIME_TARGETS`
+- a matching `prebuilts/build-tools/sysroots/*-unknown-linux-musl` sysroot and per-target static dependency archives.
+
+By contrast, the provisional NDK / llvm_android patches above set Linux host compiler triples to `*-linux-android*` or `*-linux-androideabi*`. Those are Bionic/Android triples. A triple alone does not make a binary Android-runnable: the compiler and every linked dependency must use a compatible Android sysroot, API level, and Bionic runtime.
+
+There are therefore two distinct implementation routes:
+
+1. **Static musl host tools:** retain Linux-musl triples throughout stage2 and the host-tool build configuration, build fully static ELF executables for each CPU architecture, then verify that the resulting executables run on the intended Android kernels and proot environments. The NDK packaging directory names (`linux-x86_64`, `android-arm64`, `android-armv7`) are labels only and must not be treated as proof of the runtime ABI.
+2. **Bionic host tools:** use Android triples consistently, provide the matching Android sysroot/API level to every compiler and dependency build, and link against Bionic. The current static-musl stage2 flags and sysroots cannot simply be reused for this route.
+
+Do not mix the two routes in one build. In particular, do not change only `toolchains.py` / `configs.py` triples while leaving stage2 and its dependency archives on musl, and do not claim an Android/Bionic build based only on an `android-*` output directory name.
+
+### Current verified status
+
+- Unified-diff hunk counts were checked for the four architecture-specific patch files.
+- No upstream AOSP source-tree `patch --dry-run` / `git apply --check` has been completed.
+- No x86_64 or ARMv7 stage2 build has been completed.
+- No ELF interpreter / dynamic dependency audit or on-device runtime test has been completed.
+- The existing AArch64 path is the only current implementation baseline; it must also pass the same ABI audit before being treated as release-ready.
+
+The next implementation step is to choose one runtime route, then parameterize the entire stage2 dependency graph and host configuration around it. The required build inputs are the per-architecture compiler wrapper, sysroot, dependency install prefix, runtime triple, and output directory; these must all agree.
