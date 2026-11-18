@@ -1,6 +1,6 @@
 --- a/toolchain/llvm_android/configs.py
 +++ b/toolchain/llvm_android/configs.py
-@@ -295,22 +295,23 @@
+@@ -295,20 +295,21 @@
      """Configuration for Linux targets."""
  
      target_os: hosts.Host = hosts.Host.Linux
