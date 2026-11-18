@@ -33,23 +33,25 @@ SWIG_HOST_EXECUTABLE="${SWIG_HOST_EXECUTABLE:-${LLVM_ROOT}/out/host-tools/swig-i
 PROFDATA_FILE="${LLVM_PROFDATA_FILE:-${LLVM_ROOT}/out/r563880.profdata}"
 LLVM_NATIVE_TOOL_DIR="${LLVM_NATIVE_TOOL_DIR:-${LLVM_ROOT}/out/native-tools-build/bin}"
 
-# Cross-compilation is determined from the actual build machine, not inferred
-# from the output directory name. Zig wrappers must already target HOST_ARCH.
+# CMAKE_SYSTEM_NAME=Linux makes CMake enter cross-compiling mode even when
+# the selected target happens to match the build machine. Always provide
+# build-machine-native TableGen tools rather than relying on CMake to execute
+# target-built generators during configuration.
+for native_tool in llvm-tblgen clang-tblgen lldb-tblgen; do
+    if [[ ! -x "${LLVM_NATIVE_TOOL_DIR}/${native_tool}" ]]; then
+        echo "error: missing native ${native_tool}; run bash patches/build_native_tools.sh first" >&2
+        exit 8
+    fi
+done
+NATIVE_TOOL_ARGS=("-DLLVM_NATIVE_TOOL_DIR=${LLVM_NATIVE_TOOL_DIR}")
+
 BUILD_MACHINE="$(uname -m)"
 case "${BUILD_MACHINE}:${HOST_ARCH}" in
     x86_64:x86_64|aarch64:aarch64|armv7l:armv7|armv8l:armv7)
         CMAKE_CROSSCOMPILING=FALSE
-        NATIVE_TOOL_ARGS=()
         ;;
     *)
         CMAKE_CROSSCOMPILING=TRUE
-        for native_tool in llvm-tblgen clang-tblgen lldb-tblgen; do
-            if [[ ! -x "${LLVM_NATIVE_TOOL_DIR}/${native_tool}" ]]; then
-                echo "error: missing native ${native_tool}; run bash patches/build_native_tools.sh first" >&2
-                exit 8
-            fi
-        done
-        NATIVE_TOOL_ARGS=("-DLLVM_NATIVE_TOOL_DIR=${LLVM_NATIVE_TOOL_DIR}")
         ;;
 esac
 
@@ -137,7 +139,6 @@ cmake -G Ninja \
     -DCMAKE_INSTALL_LIBDIR=lib \
     -DCMAKE_BUILD_TYPE=MinSizeRel \
     -DCMAKE_SYSTEM_NAME=Linux \
-    -DCMAKE_CROSSCOMPILING=${CMAKE_CROSSCOMPILING} \
     -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_PROCESSOR} \
     -DCMAKE_LINK_DEPENDS_USE_LINKER=FALSE \
     -DLLVM_BUILTIN_TARGETS=${MUSL_TRIPLE} \
