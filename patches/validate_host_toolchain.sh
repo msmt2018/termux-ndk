@@ -5,9 +5,14 @@ set -Eeuo pipefail
 # expensive LLVM stage2 build. This validates compiler output, not NDK packaging.
 #
 # Usage:
-#   SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+#   HOST_ARCH=aarch64 bash patches/validate_host_toolchain.sh
+#   HOST_ARCH=x86_64 TOOLCHAIN=/path/to/wrapper bash patches/validate_host_toolchain.sh
+#   HOST_ARCH=armv7 TOOLCHAIN=/path/to/wrapper bash patches/validate_host_toolchain.sh
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 HOST_ARCH="${HOST_ARCH:-aarch64}"
 LLVM_ROOT="${LLVM_ROOT:-$HOME/proj/llvm-toolchain}"
+# shellcheck source=patches/host-env.sh
 source "${SCRIPT_DIR}/host-env.sh" "${HOST_ARCH}"
 
 EXPECTED_TRIPLE="${TERMUX_NDK_HOST_TRIPLE}"
