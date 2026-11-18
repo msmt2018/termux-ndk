@@ -138,7 +138,7 @@ The repository currently contains the Stage2 consumer and prerequisite checks, b
 
 ## Automated validation
 
-Three GitHub Actions workflows are present:
+Two GitHub Actions workflows are present:
 
 - `.github/workflows/host-script-validation.yml`: Bash syntax, ShellCheck, patch hunk counts, host environment mappings, and unsupported architecture behavior.
 - `.github/workflows/upstream-patch-applicability.yml`: applies each of the three LLVM Android patch sets to a clean checkout of `mirror-goog-llvm-r563880-release`, and each of the three NDK host patch sets to a clean checkout of `platform/ndk` main; then runs Python syntax compilation on the modified modules.
