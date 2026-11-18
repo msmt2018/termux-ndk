@@ -113,3 +113,26 @@ Override `TOOLCHAIN`, `SYSROOT`, `DEPS_PREFIX`, `PYTHON_HOST_ROOT`, `PYTHON_TARG
 Stage2 now follows the static-musl route, but the provisional `ndk/toolchains*.py.patch` and `llvm_android/configs*.py.patch` files still contain Android/Bionic triples. They have **not** yet been reconciled with the static-musl host-tool output. Do not run the complete NDK integration build by mixing these configurations. The next patching pass must align the NDK and llvm_android host configuration with the selected runtime ABI, or deliberately switch stage2 to a Bionic sysroot build.
 
 No architecture-specific stage2 build has been run yet. The parameterization is a source change, not evidence that the three compilers, dependency archives, or resulting executables are already available or working.
+
+
+## Host toolchain smoke-test gate
+
+A new `patches/validate_host_toolchain.sh` checks the selected wrapper before the expensive LLVM configure/build:
+
+- verifies the compiler, linker, archiver and binary utilities exist;
+- checks `cc -dumpmachine` against the selected static-musl triple;
+- compiles both C and C++ test programs with the selected sysroot and static linking;
+- inspects ELF machine type and rejects binaries containing a PT_INTERP program header;
+- executes the smoke binaries only when the build machine matches the requested host architecture.
+
+Run it independently with:
+
+```bash
+HOST_ARCH=aarch64 bash patches/validate_host_toolchain.sh
+HOST_ARCH=x86_64 bash patches/validate_host_toolchain.sh
+HOST_ARCH=armv7 bash patches/validate_host_toolchain.sh
+```
+
+`build_stage2.sh` now invokes this validation automatically before CMake configuration. This prevents an incorrectly named or misconfigured compiler wrapper from reaching the long LLVM build.
+
+The validator has been added as source but has not yet been run against real compiler wrappers in this environment. It is a preflight gate, not a substitute for running the produced LLVM binaries on Android devices.
