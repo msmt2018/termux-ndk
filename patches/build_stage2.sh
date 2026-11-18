@@ -103,7 +103,7 @@ command -v ninja >/dev/null 2>&1 || { echo "error: ninja is required" >&2; exit 
 
 # Verify the selected wrapper really emits static ELF binaries for this
 # architecture; directory names and -dumpmachine alone are not sufficient.
-HOST_ARCH="${HOST_ARCH}" TOOLCHAIN="${TOOLCHAIN}" SYSROOT="${SYSROOT}" \\
+HOST_ARCH="${HOST_ARCH}" TOOLCHAIN="${TOOLCHAIN}" SYSROOT="${SYSROOT}" \
     "${SCRIPT_DIR}/validate_host_toolchain.sh"
 
 mkdir -p "${BUILD_DIR}" "${INSTALL_PREFIX}"
