@@ -10,7 +10,9 @@ set -Eeuo pipefail
 LLVM_ROOT="${LLVM_ROOT:-$HOME/proj/llvm-toolchain}"
 LLVM_SRC_DIR="${LLVM_SRC_DIR:-${LLVM_ROOT}/out/llvm-project/llvm}"
 NATIVE_BUILD_DIR="${NATIVE_BUILD_DIR:-${LLVM_ROOT}/out/native-tools-build}"
-BUILD_JOBS="${BUILD_JOBS:-$(nproc)}"
+DEFAULT_JOBS=2
+if command -v nproc >/dev/null 2>&1; then DEFAULT_JOBS="$(nproc)"; fi
+BUILD_JOBS="${BUILD_JOBS:-${DEFAULT_JOBS}}"
 
 [[ -f "${LLVM_SRC_DIR}/CMakeLists.txt" ]] || {
     echo "error: LLVM source tree not found: ${LLVM_SRC_DIR}" >&2
@@ -44,7 +46,8 @@ cmake -G Ninja \
     -DLLVM_ENABLE_FFI=OFF \
     -DLLDB_ENABLE_PYTHON=OFF \
     -DLLDB_ENABLE_LIBEDIT=OFF \
-    -DLLDB_ENABLE_CURSES=OFF
+    -DLLDB_ENABLE_CURSES=OFF \\
+    -DLLDB_ENABLE_LIBXML2=OFF
 
 cmake --build "${NATIVE_BUILD_DIR}" \
     --target llvm-tblgen clang-tblgen lldb-tblgen \
