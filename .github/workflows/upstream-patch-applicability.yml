@@ -43,11 +43,11 @@ jobs:
       - name: Check and apply LLVM Android patches
         run: |
           set -Eeuo pipefail
-          cd /tmp/aosp
-          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/paths.py.patch"
-          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/builders.py.patch"
-          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/base_builders.py.patch"
-          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/${{ matrix.config_patch }}"
+          cd /tmp/aosp/toolchain/llvm_android
+          patch --dry-run -p3 < "$GITHUB_WORKSPACE/patches/llvm_android/paths.py.patch"
+          patch --dry-run -p3 < "$GITHUB_WORKSPACE/patches/llvm_android/builders.py.patch"
+          patch --dry-run -p3 < "$GITHUB_WORKSPACE/patches/llvm_android/base_builders.py.patch"
+          patch --dry-run -p3 < "$GITHUB_WORKSPACE/patches/llvm_android/${{ matrix.config_patch }}"
 
   ndk-host-patches:
     name: NDK host patch set (${{ matrix.host_arch }})
