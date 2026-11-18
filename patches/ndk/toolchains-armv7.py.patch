@@ -24,7 +24,10 @@
 +            sysroot = os.environ.get("TERMUX_NDK_SYSROOT")
 +            if not sysroot:
 +                raise RuntimeError("TERMUX_NDK_SYSROOT must point to the selected static-musl sysroot")
-+            return Path(sysroot)
++            sysroot_path = Path(sysroot)
++            if not sysroot_path.is_dir():
++                raise RuntimeError("TERMUX_NDK_SYSROOT does not exist: {}".format(sysroot_path))
++            return sysroot_path
          return self.path / self.triple
 @@ -250,1 +255,1 @@
 -            Host.Linux: "x86_64-linux",
