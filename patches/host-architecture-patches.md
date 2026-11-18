@@ -73,7 +73,7 @@ The following inputs must be built separately for each host architecture:
 
 The native Python executable and target Python archive are intentionally separate. An x86_64 Python static library must never be linked into an ARM64 or ARMv7 executable.
 
-Override `TOOLCHAIN`, `SYSROOT`, `DEPS_PREFIX`, `PYTHON_HOST_ROOT`, `PYTHON_TARGET_ROOT`, `SWIG_HOST_EXECUTABLE`, `LLVM_ROOT`, `LLVM_SRC_DIR`, `BUILD_DIR`, and `INSTALL_PREFIX` when the build environment uses different paths.
+Override `TOOLCHAIN`, `SYSROOT`, `DEPS_PREFIX`, `PYTHON_HOST_ROOT`, `PYTHON_TARGET_ROOT`, `SWIG_HOST_EXECUTABLE`, `LLVM_PROFDATA_FILE`, `LLVM_ROOT`, `LLVM_SRC_DIR`, `BUILD_DIR`, and `INSTALL_PREFIX` when the build environment uses different paths. Stage2 now fails early if the profile data file is absent or empty.
 
 ## Runtime validation gates
 
