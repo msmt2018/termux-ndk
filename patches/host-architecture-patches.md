@@ -70,7 +70,7 @@ The following inputs must be built separately for each host architecture:
 - A build-machine-native Python executable under `PYTHON_HOST_ROOT`.
 - A target-architecture `libpython3.12.a` and headers under `PYTHON_TARGET_ROOT`.
 - A build-machine-native SWIG executable under `SWIG_HOST_EXECUTABLE`.
-- For cross builds, native `llvm-tblgen`, `clang-tblgen`, and `lldb-tblgen` executables. Build these first with `bash patches/build_native_tools.sh`; set `LLVM_NATIVE_TOOL_DIR` if the output is elsewhere.
+- Build-machine-native `llvm-tblgen`, `clang-tblgen`, and `lldb-tblgen` executables. Build these first for every Stage2 configuration with `bash patches/build_native_tools.sh`; CMake is explicitly configured with `CMAKE_SYSTEM_NAME=Linux`, so the script always supplies native TableGen tools through `LLVM_NATIVE_TOOL_DIR`.
 
 The native Python executable and target Python archive are intentionally separate. An x86_64 Python static library must never be linked into an ARM64 or ARMv7 executable.
 
