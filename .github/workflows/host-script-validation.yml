@@ -88,9 +88,14 @@ jobs:
           temp="$(mktemp -d)"
           trap 'rm -rf "$temp"' EXIT
           mkdir -p "$temp/deps" "$temp/python/lib" "$temp/python-host/include/python3.11" "$temp/python-host/bin"
-          printf '#!/bin/sh\nexit 0\n' > "$temp/python-host/bin/python3.11"
+          touch "$temp/python-host/include/python3.11/Python.h" "$temp/python-host/include/python3.11/pyconfig.h"
+          printf '#!/bin/sh\nprintf "Python 3.11.9\n"\n' > "$temp/python-host/bin/python3.11"
           chmod +x "$temp/python-host/bin/python3.11"
-          PYTHON_HOST_ROOT="$temp/python-host" bash -c 'source patches/resolve_python_version.sh; test "$PYTHON_VERSION" = 3.11; test "$PYTHON_HOST_EXECUTABLE" = "$PYTHON_HOST_ROOT/bin/python3.11"'
+          PYTHON_HOST_ROOT="$temp/python-host" bash -c 'source patches/resolve_python_version.sh; test "$PYTHON_VERSION" = 3.11; test "$PYTHON_HOST_EXECUTABLE" = "$PYTHON_HOST_ROOT/bin/python3.11"; test "$PYTHON_HOST_INCLUDE_DIR" = "$PYTHON_HOST_ROOT/include/python3.11"'
+          if PYTHON_HOST_ROOT="$temp/python-host" PYTHON_VERSION=3.10 bash -c 'source patches/resolve_python_version.sh'; then
+            echo "Python version override mismatch was accepted" >&2
+            exit 1
+          fi
           printf 'int archive_probe(void) { return 0; }\n' > "$temp/probe.c"
           cc -c "$temp/probe.c" -o "$temp/probe.o"
           ar rcs "$temp/probe.a" "$temp/probe.o"
