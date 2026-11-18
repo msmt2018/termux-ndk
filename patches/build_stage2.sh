@@ -184,7 +184,7 @@ cmake -G Ninja \
     -DCLANG_REPOSITORY_STRING='https://android.googlesource.com/toolchain/llvm-project' \
     -DBUG_REPORT_URL='https://github.com/android-ndk/ndk/issues' \
     '-DLLVM_ENABLE_RUNTIMES=compiler-rt;libcxx;libcxxabi;libunwind' \
-    '-DLLVM_RUNTIME_TARGETS=${MUSL_TRIPLE}' \
+    "-DLLVM_RUNTIME_TARGETS=${MUSL_TRIPLE}" \
     -DCMAKE_SYSROOT=${SYSROOT} \
     -DLLVM_BUILD_RUNTIME=ON \
     -DLIBCXX_ENABLE_STATIC=ON \
@@ -207,11 +207,11 @@ cmake -G Ninja \
     -DLIBUNWIND_HAS_DL_LIB=FALSE \
     -DLIBUNWIND_HAS_PTHREAD_LIB=FALSE \
     -DRUNTIMES_${MUSL_TRIPLE}_LIBCXX_INCLUDE_BENCHMARKS=OFF \
-    '-DBUILTINS_${MUSL_TRIPLE}_CMAKE_C_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
-    '-DBUILTINS_${MUSL_TRIPLE}_CMAKE_CXX_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -Wno-unused-command-line-argument -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
-    '-DBUILTINS_${MUSL_TRIPLE}_CMAKE_EXE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
-    '-DBUILTINS_${MUSL_TRIPLE}_CMAKE_SHARED_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
-    '-DBUILTINS_${MUSL_TRIPLE}_CMAKE_MODULE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
+    "-DBUILTINS_${MUSL_TRIPLE}_CMAKE_C_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled" \
+    "-DBUILTINS_${MUSL_TRIPLE}_CMAKE_CXX_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -Wno-unused-command-line-argument -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled" \
+    "-DBUILTINS_${MUSL_TRIPLE}_CMAKE_EXE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both" \
+    "-DBUILTINS_${MUSL_TRIPLE}_CMAKE_SHARED_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both" \
+    "-DBUILTINS_${MUSL_TRIPLE}_CMAKE_MODULE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both" \
     -DRUNTIMES_${MUSL_TRIPLE}_CMAKE_SYSROOT=${SYSROOT} \
     -DBUILTINS_${MUSL_TRIPLE}_CMAKE_PLATFORM_NO_VERSIONED_SONAME=ON \
     -DBUILTINS_${MUSL_TRIPLE}_LIBCXX_USE_COMPILER_RT=TRUE \
@@ -233,14 +233,14 @@ cmake -G Ninja \
     -DBUILTINS_${MUSL_TRIPLE}_LIBCXX_HAS_ATOMIC_LIB=NO \
     -DBUILTINS_${MUSL_TRIPLE}_LIBCXX_ENABLE_ABI_LINKER_SCRIPT=OFF \
     -DBUILTINS_${MUSL_TRIPLE}_LIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON \
-    '-DBUILTINS_${MUSL_TRIPLE}_LIBCXX_TEST_COMPILER_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -Wno-unused-command-line-argument -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
-    '-DBUILTINS_${MUSL_TRIPLE}_LIBCXX_TEST_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
+    "-DBUILTINS_${MUSL_TRIPLE}_LIBCXX_TEST_COMPILER_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -Wno-unused-command-line-argument -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled" \
+    "-DBUILTINS_${MUSL_TRIPLE}_LIBCXX_TEST_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both" \
     -DBUILTINS_${MUSL_TRIPLE}_SANITIZER_ALLOW_CXXABI=OFF \
-    '-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_C_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
-    '-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_CXX_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -Wno-unused-command-line-argument -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
-    '-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_EXE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
-    '-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_SHARED_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
-    '-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_MODULE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
+    "-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_C_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled" \
+    "-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_CXX_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -Wno-unused-command-line-argument -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled" \
+    "-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_EXE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both" \
+    "-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_SHARED_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both" \
+    "-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_MODULE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both" \
     -DRUNTIMES_${MUSL_TRIPLE}_CMAKE_PLATFORM_NO_VERSIONED_SONAME=ON \
     -DRUNTIMES_${MUSL_TRIPLE}_LIBCXX_USE_COMPILER_RT=TRUE \
     -DRUNTIMES_${MUSL_TRIPLE}_LIBCXX_HAS_MUSL_LIBC=TRUE \
