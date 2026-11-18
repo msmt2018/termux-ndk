@@ -7,6 +7,7 @@ on:
     paths:
       - "patches/build_stage2.sh"
       - "patches/validate_host_toolchain.sh"
+      - "patches/**"
       - ".github/workflows/host-script-validation.yml"
   pull_request:
     paths:
@@ -45,6 +46,9 @@ jobs:
       - name: Run ShellCheck
         run: |
           shellcheck --severity=error patches/build_stage2.sh patches/validate_host_toolchain.sh
+
+      - name: Validate unified diff hunk counts
+        run: python3 patches/validate_patch_hunks.py
 
       - name: Check unsupported architecture fails safely
         shell: bash
