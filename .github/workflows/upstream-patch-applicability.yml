@@ -22,11 +22,14 @@ jobs:
       matrix:
         include:
           - host_arch: aarch64
+            host_triple: aarch64-unknown-linux-musl
             config_patch: configs.py.patch
           - host_arch: x86_64
-            config_patch: configs-x86_64.py.patch
+            host_triple: x86_64-unknown-linux-musl
+            config_patch: configs.py.patch
           - host_arch: armv7
-            config_patch: configs-armv7.py.patch
+            host_triple: arm-unknown-linux-musleabihf
+            config_patch: configs.py.patch
     steps:
       - name: Checkout this fork
         uses: actions/checkout@v4
@@ -41,6 +44,8 @@ jobs:
             /tmp/aosp/toolchain/llvm_android
 
       - name: Check and apply LLVM Android patches
+        env:
+          TERMUX_NDK_HOST_ARCH: ${{ matrix.host_arch }}
         run: |
           set -Eeuo pipefail
           cd /tmp/aosp/toolchain/llvm_android
@@ -60,11 +65,14 @@ jobs:
       matrix:
         include:
           - host_arch: aarch64
+            host_triple: aarch64-unknown-linux-musl
             toolchain_patch: toolchains.py.patch
           - host_arch: x86_64
-            toolchain_patch: toolchains-x86_64.py.patch
+            host_triple: x86_64-unknown-linux-musl
+            toolchain_patch: toolchains.py.patch
           - host_arch: armv7
-            toolchain_patch: toolchains-armv7.py.patch
+            host_triple: arm-unknown-linux-musleabihf
+            toolchain_patch: toolchains.py.patch
     steps:
       - name: Checkout this fork
         uses: actions/checkout@v4
@@ -76,6 +84,9 @@ jobs:
             https://android.googlesource.com/platform/ndk /tmp/aosp-ndk
 
       - name: Check and apply NDK host patches
+        env:
+          TERMUX_NDK_HOST_ARCH: ${{ matrix.host_arch }}
+          TERMUX_NDK_HOST_TRIPLE: ${{ matrix.host_triple }}
         run: |
           set -Eeuo pipefail
           cd /tmp/aosp-ndk
