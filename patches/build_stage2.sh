@@ -5,54 +5,21 @@ set -Eeuo pipefail
 # Linux-musl toolchain. This does NOT produce Bionic-linked Android executables.
 #
 # Usage:
-#   HOST_ARCH=aarch64 ./build_stage2.sh
-#   HOST_ARCH=x86_64 TOOLCHAIN="$HOME/opt/zig-as-llvm-x86_64" ./build_stage2.sh
-#   HOST_ARCH=armv7 TOOLCHAIN="$HOME/opt/zig-as-llvm-armv7" ./build_stage2.sh
+#   HOST_ARCH=aarch64 bash patches/build_stage2.sh
+#   HOST_ARCH=x86_64 TOOLCHAIN="$HOME/opt/zig-as-llvm-x86_64" bash patches/build_stage2.sh
+#   HOST_ARCH=armv7 TOOLCHAIN="$HOME/opt/zig-as-llvm-armv7" bash patches/build_stage2.sh
 #
 # Each HOST_ARCH requires its own Zig wrapper, sysroot and dependency archives.
 # Keep the three builds in separate build/install directories.
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-
 HOST_ARCH="${HOST_ARCH:-aarch64}"
 LLVM_ROOT="${LLVM_ROOT:-$HOME/proj/llvm-toolchain}"
-# This is the single source of truth for host tags, triples and sysroot paths.
+# shellcheck source=patches/host-env.sh
 source "${SCRIPT_DIR}/host-env.sh" "${HOST_ARCH}"
 
 MUSL_TRIPLE="${TERMUX_NDK_HOST_TRIPLE}"
-TOOLCHAIN="$HOME/opt/zig-as-llvm-x86_64" ./build_stage2.sh
-#   HOST_ARCH=armv7 TOOLCHAIN="$HOME/opt/zig-as-llvm-armv7" ./build_stage2.sh
-#
-# Each HOST_ARCH requires its own Zig wrapper, sysroot and dependency archives.
-# Keep the three builds in separate build/install directories.
-
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-
-HOST_ARCH="${HOST_ARCH:-aarch64}"
-case "${HOST_ARCH}" in
-    aarch64)
-        MUSL_TRIPLE="aarch64-unknown-linux-musl"
-        CMAKE_PROCESSOR="aarch64"
-        DEFAULT_TOOLCHAIN="$HOME/opt/zig-as-llvm"
-        ;;
-    x86_64)
-        MUSL_TRIPLE="x86_64-unknown-linux-musl"
-        CMAKE_PROCESSOR="x86_64"
-        DEFAULT_TOOLCHAIN="$HOME/opt/zig-as-llvm-x86_64"
-        ;;
-    armv7)
-        MUSL_TRIPLE="arm-unknown-linux-musleabihf"
-        CMAKE_PROCESSOR="arm"
-        DEFAULT_TOOLCHAIN="$HOME/opt/zig-as-llvm-armv7"
-        ;;
-    *)
-        echo "error: unsupported HOST_ARCH '${HOST_ARCH}' (expected aarch64, x86_64 or armv7)" >&2
-        exit 2
-        ;;
-esac
-
 TOOLCHAIN="${TOOLCHAIN:-${DEFAULT_TOOLCHAIN}}"
-LLVM_ROOT="${LLVM_ROOT:-$HOME/proj/llvm-toolchain}"
 LLVM_SRC_DIR="${LLVM_SRC_DIR:-${LLVM_ROOT}/out/llvm-project/llvm}"
 BUILD_DIR="${BUILD_DIR:-${LLVM_ROOT}/out/stage2-build-${HOST_ARCH}}"
 INSTALL_PREFIX="${INSTALL_PREFIX:-${LLVM_ROOT}/out/stage2-install-${HOST_ARCH}}"
