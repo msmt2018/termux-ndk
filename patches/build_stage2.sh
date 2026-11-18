@@ -273,3 +273,18 @@ cmake -G Ninja \
     -DRUNTIMES_${MUSL_TRIPLE}_COMPILER_RT_USE_BUILTINS_LIBRARY=TRUE \
     -DRUNTIMES_${MUSL_TRIPLE}_CMAKE_LINK_DEPENDS_USE=FALSE \
     ${LLVM_SRC_DIR}
+
+if [[ "${BUILD_STAGE2:-0}" == "1" ]]; then
+    BUILD_JOBS="${BUILD_JOBS:-$(nproc)}"
+    if ! [[ "${BUILD_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
+        echo "error: BUILD_JOBS must be a positive integer" >&2
+        exit 7
+    fi
+
+    cmake --build "${BUILD_DIR}" --parallel "${BUILD_JOBS}"
+    cmake --install "${BUILD_DIR}"
+    HOST_ARCH="${HOST_ARCH}" LLVM_ROOT="${LLVM_ROOT}" INSTALL_PREFIX="${INSTALL_PREFIX}" \
+        bash "${SCRIPT_DIR}/validate_stage2_install.sh"
+else
+    echo "CMake configuration completed. Set BUILD_STAGE2=1 to build, install and audit this host variant."
+fi
