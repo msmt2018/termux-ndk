@@ -86,6 +86,7 @@ jobs:
           set -Eeuo pipefail
           git clone --depth=1 --filter=blob:none --branch main \
             https://android.googlesource.com/platform/ndk /tmp/aosp-ndk
+          git -C /tmp/aosp-ndk checkout c4bdd155116a9b42767534b35e93f83a91e4a06f
 
       - name: Check and apply NDK host patches
         env:
