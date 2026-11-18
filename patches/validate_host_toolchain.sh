@@ -66,7 +66,7 @@ cat > "${TMP_DIR}/smoke.cpp" <<'CPP_EOF'
 #include <string>
 int main() {
     const std::string value = "static-musl-cxx-ok";
-    std::cout << value << '\\n';
+    std::cout << value << '\n';
     return value.empty();
 }
 CPP_EOF
