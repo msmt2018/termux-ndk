@@ -18,7 +18,7 @@
 +        if self.target == Host.Linux:
 +            return [self.sysroot / "lib", self.sysroot / "usr/lib"]
 +        lib_dirs = [
-@@ -241,3 +243,6 @@
+@@ -241,3 +243,9 @@
          if self.target == Host.Linux:
 -            return self.path / "sysroot"
 +            sysroot = os.environ.get("TERMUX_NDK_SYSROOT")
