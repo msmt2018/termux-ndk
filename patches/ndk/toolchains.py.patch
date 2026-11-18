@@ -10,7 +10,7 @@
  HOST_TRIPLE_MAP = {
      Host.Darwin: "x86_64-apple-darwin",
 -    Host.Linux: "x86_64-linux-gnu",
-+    Host.Linux: "aarch64-unknown-linux-musl",
++    Host.Linux: os.environ.get("TERMUX_NDK_HOST_TRIPLE", "aarch64-unknown-linux-musl"),
      Host.Windows64: "x86_64-w64-mingw32",
  }
 @@ -208,1 +208,3 @@
@@ -31,7 +31,7 @@
          return self.path / self.triple
 @@ -250,1 +255,1 @@
 -            Host.Linux: "x86_64-linux",
-+            Host.Linux: "aarch64-unknown-linux-musl",
++            Host.Linux: os.environ.get("TERMUX_NDK_HOST_TRIPLE", "aarch64-unknown-linux-musl"),
 @@ -312,5 +317,5 @@
          if self.target.is_windows:
              lib_dirs.append(self.path_for_host(self.target) / "lib64")
