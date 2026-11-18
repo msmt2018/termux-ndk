@@ -9,14 +9,12 @@
  
      @property
      def cxxflags(self) -> List[str]:
-@@ -743,1 +743,11 @@
+@@ -743,1 +743,9 @@
 -        defines['LLVM_TARGETS_TO_BUILD'] = ';'.join(sorted(self.llvm_targets))
 +        # Build the backends needed by all four Android target ABIs, while
 +        # selecting the host executable architecture from LinuxMuslHostConfig.
 +        defines['LLVM_TARGETS_TO_BUILD'] = 'AArch64;ARM;X86'
-+        defines['LLVM_EXPERIMENTAL_TARGETS_TO_BUILD'] = 'ARC;CSKY;M68k;VE'
-+        defines['LLVM_ENABLE_FFI'] = 'ON'
-+        defines['LLVM_ENABLE_PIC'] = 'ON'
++++        defines['LLVM_ENABLE_PIC'] = 'ON'
 +        defines['CMAKE_BUILD_WITH_INSTALL_RPATH'] = 'ON'
 +        defines['CMAKE_POLICY_DEFAULT_CMP0116'] = 'OLD'
 +        host_arch = self._config.llvm_triple.split('-', 1)[0]
