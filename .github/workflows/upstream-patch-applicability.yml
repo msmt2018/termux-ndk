@@ -41,12 +41,11 @@ jobs:
       - name: Fetch pinned AOSP LLVM Android source
         run: |
           set -Eeuo pipefail
-          mkdir -p /tmp/aosp/toolchain
-          git clone --depth=1 --filter=blob:none \
-            --branch mirror-goog-llvm-r563880-release \
-            https://android.googlesource.com/toolchain/llvm_android \
-            /tmp/aosp/toolchain/llvm_android
-          git -C /tmp/aosp/toolchain/llvm_android checkout 19756bd1d4ffca122636e553ab43b4befe827183
+          mkdir -p /tmp/aosp/toolchain/llvm_android
+          git -C /tmp/aosp/toolchain/llvm_android init
+          git -C /tmp/aosp/toolchain/llvm_android remote add origin https://android.googlesource.com/toolchain/llvm_android
+          git -C /tmp/aosp/toolchain/llvm_android fetch --depth=1 origin 19756bd1d4ffca122636e553ab43b4befe827183
+          git -C /tmp/aosp/toolchain/llvm_android checkout --detach FETCH_HEAD
           test "$(git -C /tmp/aosp/toolchain/llvm_android rev-parse HEAD)" = "19756bd1d4ffca122636e553ab43b4befe827183"
 
       - name: Check and apply LLVM Android patches
@@ -86,9 +85,11 @@ jobs:
       - name: Fetch AOSP NDK source
         run: |
           set -Eeuo pipefail
-          git clone --depth=1 --filter=blob:none --branch main \
-            https://android.googlesource.com/platform/ndk /tmp/aosp-ndk
-          git -C /tmp/aosp-ndk checkout c4bdd155116a9b42767534b35e93f83a91e4a06f
+          mkdir -p /tmp/aosp-ndk
+          git -C /tmp/aosp-ndk init
+          git -C /tmp/aosp-ndk remote add origin https://android.googlesource.com/platform/ndk
+          git -C /tmp/aosp-ndk fetch --depth=1 origin c4bdd155116a9b42767534b35e93f83a91e4a06f
+          git -C /tmp/aosp-ndk checkout --detach FETCH_HEAD
           test "$(git -C /tmp/aosp-ndk rev-parse HEAD)" = "c4bdd155116a9b42767534b35e93f83a91e4a06f"
 
       - name: Check and apply NDK host patches
