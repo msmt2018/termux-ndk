@@ -46,11 +46,12 @@ jobs:
           cd /tmp/aosp/toolchain/llvm_android
           echo "LLVM checkout root: $PWD"
           find . -maxdepth 3 -type f -name "paths.py" -o -name "configs.py" | sort
-          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/paths.py.patch"
-          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/builders.py.patch"
+          patch -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/paths.py.patch"
+          patch -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/builders.py.patch"
           grep -n -C 8 "LLVM_TARGETS_TO_BUILD" src/llvm_android/base_builders.py
-          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/base_builders.py.patch"
-          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/${{ matrix.config_patch }}"
+          patch -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/base_builders.py.patch"
+          patch -p1 < "$GITHUB_WORKSPACE/patches/llvm_android/${{ matrix.config_patch }}"
+          python3 -m compileall -q src/llvm_android
 
   ndk-host-patches:
     name: NDK host patch set (${{ matrix.host_arch }})
@@ -79,5 +80,6 @@ jobs:
         run: |
           set -Eeuo pipefail
           cd /tmp/aosp-ndk
-          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/ndk/hosts.py.patch"
-          patch --dry-run -p1 < "$GITHUB_WORKSPACE/patches/ndk/${{ matrix.toolchain_patch }}"
+          patch -p1 < "$GITHUB_WORKSPACE/patches/ndk/hosts.py.patch"
+          patch -p1 < "$GITHUB_WORKSPACE/patches/ndk/${{ matrix.toolchain_patch }}"
+          python3 -m py_compile ndk/hosts.py ndk/toolchains.py
