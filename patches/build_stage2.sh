@@ -28,6 +28,9 @@ SYSROOT="${SYSROOT:-${TERMUX_NDK_SYSROOT}}"
 TERMUX_NDK_SYSROOT="${SYSROOT}"
 export TERMUX_NDK_SYSROOT
 PYTHON_HOST_ROOT="${PYTHON_HOST_ROOT:-${LLVM_ROOT}/prebuilts/python/linux-x86}"
+# Resolve the version from the pinned AOSP Python prebuilts; do not hardcode it.
+# shellcheck source=patches/resolve_python_version.sh
+source "${SCRIPT_DIR}/resolve_python_version.sh"
 PYTHON_TARGET_ROOT="${PYTHON_TARGET_ROOT:-${LLVM_ROOT}/out/python-${MUSL_TRIPLE}-install}"
 SWIG_HOST_EXECUTABLE="${SWIG_HOST_EXECUTABLE:-${LLVM_ROOT}/out/host-tools/swig-install/bin/swig}"
 PROFDATA_FILE="${LLVM_PROFDATA_FILE:-${LLVM_ROOT}/out/r563880.profdata}"
@@ -61,7 +64,7 @@ for tool in cc c++ ld objcopy ar ranlib strip; do
         exit 3
     fi
 done
-for required in "${LLVM_SRC_DIR}/CMakeLists.txt" "${SYSROOT}" "${PYTHON_HOST_ROOT}/bin/python3.12" "${PYTHON_TARGET_ROOT}/lib/libpython3.12.a" "${PYTHON_TARGET_ROOT}/include/python3.12"; do
+for required in "${LLVM_SRC_DIR}/CMakeLists.txt" "${SYSROOT}" "${PYTHON_HOST_EXECUTABLE}" "${PYTHON_TARGET_ROOT}/lib/libpython${PYTHON_VERSION}.a" "${PYTHON_TARGET_ROOT}/include/python${PYTHON_VERSION}"; do
     if [[ ! -e "${required}" ]]; then
         echo "error: required stage2 input does not exist: ${required}" >&2
         exit 4
@@ -199,11 +202,11 @@ cmake -G Ninja \
     -DLLVM_ENABLE_THREADS=ON \
     -DLLVM_VERSION_SUFFIX= \
     -DLLVM_PROFDATA_FILE="${PROFDATA_FILE}" \
-    -DPython3_LIBRARY=${PYTHON_TARGET_ROOT}/lib/libpython3.12.a \
-    -DPython3_LIBRARIES=${PYTHON_TARGET_ROOT}/lib/libpython3.12.a \
-    -DPython3_INCLUDE_DIR=${PYTHON_TARGET_ROOT}/include/python3.12 \
-    -DPython3_INCLUDE_DIRS=${PYTHON_TARGET_ROOT}/include/python3.12 \
-    -DPython3_EXECUTABLE=${PYTHON_HOST_ROOT}/bin/python3.12 \
+    -DPython3_LIBRARY=${PYTHON_TARGET_ROOT}/lib/libpython${PYTHON_VERSION}.a \
+    -DPython3_LIBRARIES=${PYTHON_TARGET_ROOT}/lib/libpython${PYTHON_VERSION}.a \
+    -DPython3_INCLUDE_DIR=${PYTHON_TARGET_ROOT}/include/python${PYTHON_VERSION} \
+    -DPython3_INCLUDE_DIRS=${PYTHON_TARGET_ROOT}/include/python${PYTHON_VERSION} \
+    -DPython3_EXECUTABLE=${PYTHON_HOST_EXECUTABLE} \
     -DZLIB_INCLUDE_DIR=${DEPS_PREFIX}/libz-${MUSL_TRIPLE}-install/include \
     -DZLIB_LIBRARY=${DEPS_PREFIX}/libz-${MUSL_TRIPLE}-install/lib/libz.a \
     -DLIBXML2_INCLUDE_DIR=${DEPS_PREFIX}/libxml2-${MUSL_TRIPLE}-install/include/libxml2 \
