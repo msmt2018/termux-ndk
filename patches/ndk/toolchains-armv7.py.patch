@@ -41,6 +41,6 @@
          flags = [
              f"--target={host_triple}",
          ]
-+         flags.append("-fcolor-diagnostics")
++        flags.append("-fcolor-diagnostics")
 +        flags.append("-march=armv7-a")
  
