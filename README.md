@@ -28,6 +28,8 @@ The `multi-host-architecture-patches` branch contains:
 - a parameterized LLVM Stage2 entry point for AArch64, x86_64, and ARMv7;
 - a static C/C++ compiler smoke-test gate with ELF architecture and interpreter checks;
 - a shared host environment selector for consistent host tags, triples, and sysroots;
+- a native LLVM/Clang/LLDB TableGen bootstrap for cross builds;
+- a post-install ELF audit for machine type, interpreter, and dynamic dependencies;
 - NDK host-tag detection for x86_64, Android ARM64, and Android ARMv7;
 - shared environment-driven LLVM and NDK Musl host patches, validated in separate clean AOSP source trees for all three architecture selections.
 
