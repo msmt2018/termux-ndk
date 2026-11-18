@@ -30,6 +30,7 @@ export TERMUX_NDK_SYSROOT
 PYTHON_HOST_ROOT="${PYTHON_HOST_ROOT:-${LLVM_ROOT}/prebuilts/python/linux-x86}"
 PYTHON_TARGET_ROOT="${PYTHON_TARGET_ROOT:-${LLVM_ROOT}/out/python-${MUSL_TRIPLE}-install}"
 SWIG_HOST_EXECUTABLE="${SWIG_HOST_EXECUTABLE:-${LLVM_ROOT}/out/host-tools/swig-install/bin/swig}"
+PROFDATA_FILE="${LLVM_PROFDATA_FILE:-${LLVM_ROOT}/out/r563880.profdata}"
 LLVM_NATIVE_TOOL_DIR="${LLVM_NATIVE_TOOL_DIR:-${LLVM_ROOT}/out/native-tools-build/bin}"
 
 # Cross-compilation is determined from the actual build machine, not inferred
@@ -65,6 +66,7 @@ for required in "${LLVM_SRC_DIR}/CMakeLists.txt" "${SYSROOT}" "${PYTHON_HOST_ROO
     fi
 done
 [[ -x "${SWIG_HOST_EXECUTABLE}" ]] || { echo "error: missing build-machine-native SWIG executable: ${SWIG_HOST_EXECUTABLE}" >&2; exit 5; }
+[[ -s "${PROFDATA_FILE}" ]] || { echo "error: missing or empty LLVM profile data: ${PROFDATA_FILE}" >&2; exit 5; }
 
 # Fail before CMake configuration if any architecture-specific static
 # dependency has not been built and installed for this exact musl triple.
@@ -110,6 +112,7 @@ echo "Dependency prefix        : ${DEPS_PREFIX}"
 echo "Python host runtime      : ${PYTHON_HOST_ROOT}"
 echo "Python target library    : ${PYTHON_TARGET_ROOT}"
 echo "Native SWIG executable   : ${SWIG_HOST_EXECUTABLE}"
+echo "LLVM profile data        : ${PROFDATA_FILE}"
 echo "Native TableGen tools    : ${LLVM_NATIVE_TOOL_DIR}"
 echo "Build directory          : ${BUILD_DIR}"
 echo "Install prefix           : ${INSTALL_PREFIX}"
@@ -185,7 +188,7 @@ cmake -G Ninja \
     -DLLVM_ENABLE_CURL=OFF \
     -DLLVM_ENABLE_THREADS=ON \
     -DLLVM_VERSION_SUFFIX= \
-    -DLLVM_PROFDATA_FILE=$HOME/proj/llvm-toolchain/out/r563880.profdata \
+    -DLLVM_PROFDATA_FILE="${PROFDATA_FILE}" \
     -DPython3_LIBRARY=${PYTHON_TARGET_ROOT}/lib/libpython3.12.a \
     -DPython3_LIBRARIES=${PYTHON_TARGET_ROOT}/lib/libpython3.12.a \
     -DPython3_INCLUDE_DIR=${PYTHON_TARGET_ROOT}/include/python3.12 \
