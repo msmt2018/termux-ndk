@@ -84,6 +84,8 @@ jobs:
           python3 -m py_compile ndk/hosts.py ndk/toolchains.py
           python3 - <<'PY'
           import os
+          from types import SimpleNamespace
+          from unittest.mock import patch
           from ndk.hosts import Host, host_to_tag
 
           for tag in ("linux-x86_64", "android-arm64", "android-armv7"):
@@ -91,6 +93,21 @@ jobs:
               assert host_to_tag(Host.Linux) == tag, tag
 
           os.environ.pop("TERMUX_NDK_HOST_TAG", None)
-          assert host_to_tag(Host.Linux) == "linux-x86_64"
-          print("PASS: NDK host tag override and x86_64 auto-detection")
+          for machine, tag in (
+              ("x86_64", "linux-x86_64"),
+              ("aarch64", "android-arm64"),
+              ("armv7l", "android-armv7"),
+              ("armv8l", "android-armv7"),
+          ):
+              with patch("ndk.hosts.os.uname", return_value=SimpleNamespace(machine=machine)):
+                  assert host_to_tag(Host.Linux) == tag, (machine, tag)
+
+          os.environ["TERMUX_NDK_HOST_TAG"] = "invalid"
+          try:
+              host_to_tag(Host.Linux)
+          except ValueError:
+              pass
+          else:
+              raise AssertionError("invalid host tag was accepted")
+          print("PASS: NDK host tag override, auto-detection and rejection")
           PY
