@@ -1,131 +1,95 @@
-# Android host architecture patch sets
+# Multi-host NDK architecture and build status
 
-These patch files are **mutually exclusive alternatives**. Apply exactly one host patch set to a fresh checkout of the matching AOSP NDK / llvm_android source revision. Do not apply the x86_64 and ARMv7 patches on top of the AArch64 patch: all three intentionally replace the same Linux-host configuration.
+## Target package design
 
-## Patch matrix
+Produce **one unified NDK archive** containing three host toolchain variants. Every host variant must retain all four Android application target ABIs.
 
-| NDK prebuilt directory | Host compiler triple | NDK host GCC-style triple | Patch files |
+| Host package tag | Host CPU | Static-musl host triple | Stage2 Zig wrapper default |
 |---|---|---|---|
-| `linux-x86_64` | `x86_64-linux-android28` | `x86_64-linux-android` | `ndk/toolchains-x86_64.py.patch`, `llvm_android/configs-x86_64.py.patch` |
-| `android-arm64` | `aarch64-linux-android28` | `aarch64-linux-android` | Existing `ndk/toolchains.py.patch`, `llvm_android/configs.py.patch` |
-| `android-armv7` | `armv7a-linux-androideabi21` | `arm-linux-androideabi` | `ndk/toolchains-armv7.py.patch`, `llvm_android/configs-armv7.py.patch` |
+| `linux-x86_64` | x86-64 | `x86_64-unknown-linux-musl` | `$HOME/opt/zig-as-llvm-x86_64` |
+| `android-arm64` | AArch64 | `aarch64-unknown-linux-musl` | `$HOME/opt/zig-as-llvm` |
+| `android-armv7` | ARMv7-A hard-float | `arm-unknown-linux-musleabihf` | `$HOME/opt/zig-as-llvm-armv7` |
 
-The ARMv7 host uses the ARMv7-A instruction set and API 21 as its initial host compatibility floor. This is a build-time policy and must be confirmed against the final runtime dependencies and actual Android 32-bit devices before release.
-
-## Important separation: host versus target
-
-These patches change the **host executable architecture** of the NDK build tools. They must not remove or replace the NDK's Android target ABIs. Every host package must retain the complete target set:
+Android target ABIs remain:
 
 - `arm64-v8a`
 - `armeabi-v7a`
 - `x86_64`
 - `x86`
 
-The LLVM target/sysroot configuration is shared across host variants. Do not set LLVM's only target to the host architecture.
+The `android-arm64` and `android-armv7` names are NDK host package tags. They do **not** mean that these executables are Bionic-linked. The current runtime strategy is fully static Linux-musl executables so that the same host tools can run in Termux and compatible proot Linux environments. ELF and real-device tests are still required.
 
-## Apply
+## Patch composition
 
-Run each patch set against its own clean source checkout, for example:
+Apply one architecture variant to a clean upstream source tree. Do not apply multiple architecture variants to the same checkout.
 
-```bash
-# x86_64 host
-patch -p1 < patches/ndk/toolchains-x86_64.py.patch
-patch -p1 < patches/llvm_android/configs-x86_64.py.patch
+Common NDK patch:
 
-# ARMv7 host (use a separate clean checkout)
-patch -p1 < patches/ndk/toolchains-armv7.py.patch
-patch -p1 < patches/llvm_android/configs-armv7.py.patch
-```
+- `patches/ndk/hosts.py.patch`: selects `linux-x86_64`, `android-arm64`, or `android-armv7` using `TERMUX_NDK_HOST_TAG` or the actual Linux machine architecture.
 
-The existing unsuffixed patch files remain the AArch64 host variant.
+Architecture-specific NDK patch:
 
-## Known follow-up required before building
+| Host | Patch |
+|---|---|
+| x86-64 | `patches/ndk/toolchains-x86_64.py.patch` |
+| AArch64 | `patches/ndk/toolchains.py.patch` |
+| ARMv7 | `patches/ndk/toolchains-armv7.py.patch` |
 
-This was the original repository state before the multi-host work. Stage2 is now parameterized by `HOST_ARCH`, and a compiler smoke-test gate has been added. Real compiler wrappers, sysroots, dependency archives, and on-device execution still need to be supplied and tested.
+The NDK patches set the corresponding Musl host triple, require `TERMUX_NDK_SYSROOT`, reject a missing sysroot directory, use the selected sysroot's `lib` and `usr/lib` search paths, and avoid adding the stage0 Clang `lib64` directory to target-host links.
 
-Also verify the actual upstream source revision before applying: the patch context is based on the source layout represented by the repository's existing AArch64 patches. AOSP source revisions can change these contexts.
+Common LLVM Android patches:
 
+- `patches/llvm_android/base_builders.py.patch`: derives the host triple and LLVM host architecture from the selected config; builds the `AArch64;ARM;X86` backends required by all four Android target ABIs.
+- `patches/llvm_android/builders.py.patch`: adds the existing profile warning suppression.
 
-## Runtime ABI gate: do not conflate Android triples with static-musl builds
+Architecture-specific LLVM Android config patch:
 
-The patch matrix above is **provisional** until the runtime ABI is made consistent with the stage2 compiler configuration.
+| Host | Patch |
+|---|---|
+| x86-64 | `patches/llvm_android/configs-x86_64.py.patch` |
+| AArch64 | `patches/llvm_android/configs.py.patch` |
+| ARMv7 | `patches/llvm_android/configs-armv7.py.patch` |
 
-The current `patches/build_stage2.sh` configures:
+These variants use upstream `LinuxMuslHostConfig`, select the corresponding `hosts.Arch`, and set `is_cross_compiling` according to the build machine architecture. The generic glibc `LinuxConfig` is not repurposed as an Android/Bionic configuration. The old global `GCC_ROOT` override patch was removed because `LinuxMuslConfig` already provides its own sysroot, library directories, and binary directories.
 
-- `CMAKE_SYSTEM_NAME=Linux`
-- a Zig-based compiler wrapper
-- `-static` compile/link flags
-- `*-unknown-linux-musl` as `LLVM_DEFAULT_TARGET_TRIPLE`, `LLVM_BUILTIN_TARGETS`, and `LLVM_RUNTIME_TARGETS`
-- a matching `prebuilts/build-tools/sysroots/*-unknown-linux-musl` sysroot and per-target static dependency archives.
+## Shared host environment
 
-By contrast, the provisional NDK / llvm_android patches above set Linux host compiler triples to `*-linux-android*` or `*-linux-androideabi*`. Those are Bionic/Android triples. A triple alone does not make a binary Android-runnable: the compiler and every linked dependency must use a compatible Android sysroot, API level, and Bionic runtime.
+`patches/host-env.sh` is the single source of truth for host package tag, Musl triple, default Zig wrapper, CMake processor, and sysroot path.
 
-There are therefore two distinct implementation routes:
-
-1. **Static musl host tools:** retain Linux-musl triples throughout stage2 and the host-tool build configuration, build fully static ELF executables for each CPU architecture, then verify that the resulting executables run on the intended Android kernels and proot environments. The NDK packaging directory names (`linux-x86_64`, `android-arm64`, `android-armv7`) are labels only and must not be treated as proof of the runtime ABI.
-2. **Bionic host tools:** use Android triples consistently, provide the matching Android sysroot/API level to every compiler and dependency build, and link against Bionic. The current static-musl stage2 flags and sysroots cannot simply be reused for this route.
-
-Do not mix the two routes in one build. In particular, do not change only `toolchains.py` / `configs.py` triples while leaving stage2 and its dependency archives on musl, and do not claim an Android/Bionic build based only on an `android-*` output directory name.
-
-### Current verified status
-
-- Unified-diff hunk counts were checked for the four architecture-specific patch files.
-- No upstream AOSP source-tree `patch --dry-run` / `git apply --check` has been completed.
-- No x86_64 or ARMv7 stage2 build has been completed.
-- No ELF interpreter / dynamic dependency audit or on-device runtime test has been completed.
-- The existing AArch64 path is the only current implementation baseline; it must also pass the same ABI audit before being treated as release-ready.
-
-The next implementation step is to choose one runtime route, then parameterize the entire stage2 dependency graph and host configuration around it. The required build inputs are the per-architecture compiler wrapper, sysroot, dependency install prefix, runtime triple, and output directory; these must all agree.
-
-
-## Stage2 parameterization added
-
-`patches/build_stage2.sh` now accepts one architecture per invocation:
-
-| `HOST_ARCH` | Static-musl runtime triple | Default Zig wrapper |
-|---|---|---|
-| `aarch64` | `aarch64-unknown-linux-musl` | `$HOME/opt/zig-as-llvm` |
-| `x86_64` | `x86_64-unknown-linux-musl` | `$HOME/opt/zig-as-llvm-x86_64` |
-| `armv7` | `arm-unknown-linux-musleabihf` | `$HOME/opt/zig-as-llvm-armv7` |
-
-Each invocation uses a separate build directory and install prefix. The script now parameterizes the LLVM runtime triple, sysroot, dependency install paths, compiler wrapper, Python paths, and CMake processor. It also fails early when architecture-specific dependencies are missing.
-
-Example invocations:
+Source it in the same shell before building a host variant:
 
 ```bash
-HOST_ARCH=aarch64 ./patches/build_stage2.sh
-HOST_ARCH=x86_64 ./patches/build_stage2.sh
-HOST_ARCH=armv7 ./patches/build_stage2.sh
+source patches/host-env.sh aarch64
+# or: x86_64 / armv7
 ```
 
-The following inputs must exist for each architecture before stage2 can configure:
+It exports:
 
-- A Zig wrapper at `TOOLCHAIN/bin/{cc,c++,ld,objcopy,ar,ranlib,strip}` that actually targets the selected architecture.
-- The matching `prebuilts/build-tools/sysroots/$MUSL_TRIPLE` sysroot.
-- Matching static dependency installs under `out/lib/*-$MUSL_TRIPLE-install`.
-- A build-machine-native Python executable under `PYTHON_HOST_ROOT`.
-- A target-architecture `libpython3.12.a` and headers under `PYTHON_TARGET_ROOT`. The host Python executable and target Python library are intentionally separate; linking the x86_64 host Python archive into an ARM64 or ARMv7 executable would be an architecture mismatch.
+- `HOST_ARCH`
+- `TERMUX_NDK_HOST_TAG`
+- `TERMUX_NDK_HOST_TRIPLE`
+- `TERMUX_NDK_SYSROOT`
+- `CMAKE_PROCESSOR`
+- `DEFAULT_TOOLCHAIN`
+- `LLVM_ROOT`
 
-Override `TOOLCHAIN`, `SYSROOT`, `DEPS_PREFIX`, `PYTHON_HOST_ROOT`, `PYTHON_TARGET_ROOT`, `LLVM_ROOT`, `LLVM_SRC_DIR`, `BUILD_DIR`, or `INSTALL_PREFIX` when the build environment uses different locations.
+For CI cross-builds, explicitly select the desired architecture. Machine auto-detection in `hosts.py.patch` is intended for runtime selection when a user launches the packaged NDK on their device.
 
-### Integration blocker still open
+Override `LLVM_ROOT`, `SYSROOT`, or `TERMUX_NDK_SYSROOT` before sourcing if the workspace uses non-default paths.
 
-Stage2 now follows the static-musl route, but the provisional `ndk/toolchains*.py.patch` and `llvm_android/configs*.py.patch` files still contain Android/Bionic triples. They have **not** yet been reconciled with the static-musl host-tool output. Do not run the complete NDK integration build by mixing these configurations. The next patching pass must align the NDK and llvm_android host configuration with the selected runtime ABI, or deliberately switch stage2 to a Bionic sysroot build.
+## Stage2 build entry
 
-No architecture-specific stage2 build has been run yet. The parameterization is a source change, not evidence that the three compilers, dependency archives, or resulting executables are already available or working.
+`patches/build_stage2.sh` now accepts one host architecture per invocation:
 
+```bash
+HOST_ARCH=aarch64 bash patches/build_stage2.sh
+HOST_ARCH=x86_64 bash patches/build_stage2.sh
+HOST_ARCH=armv7 bash patches/build_stage2.sh
+```
 
-## Host toolchain smoke-test gate
+Each architecture uses a separate build directory and install prefix. The script parameterizes the compiler wrapper, runtime triple, sysroot, dependency paths, Python paths, and CMake processor. It performs preflight checks before invoking CMake.
 
-A new `patches/validate_host_toolchain.sh` checks the selected wrapper before the expensive LLVM configure/build:
-
-- verifies the compiler, linker, archiver and binary utilities exist;
-- checks `cc -dumpmachine` against the selected static-musl triple;
-- compiles both C and C++ test programs with the selected sysroot and static linking;
-- inspects ELF machine type and rejects binaries containing a PT_INTERP program header;
-- executes the smoke binaries only when the build machine matches the requested host architecture.
-
-Run it independently with:
+The compiler smoke test can also be run independently:
 
 ```bash
 HOST_ARCH=aarch64 bash patches/validate_host_toolchain.sh
@@ -133,72 +97,53 @@ HOST_ARCH=x86_64 bash patches/validate_host_toolchain.sh
 HOST_ARCH=armv7 bash patches/validate_host_toolchain.sh
 ```
 
-`build_stage2.sh` now invokes this validation automatically before CMake configuration. This prevents an incorrectly named or misconfigured compiler wrapper from reaching the long LLVM build.
+It checks the wrapper tools, `cc -dumpmachine`, static C and C++ compilation, ELF machine type, and absence of a PT_INTERP program header. It executes the test binaries only when the build machine matches the selected architecture.
 
-The validator has been added as source but has not yet been run against real compiler wrappers in this environment. It is a preflight gate, not a substitute for running the produced LLVM binaries on Android devices.
+### Build-time tools versus target libraries
 
+Cross builds must not try to execute target-architecture tools on the x86-64 build runner:
 
-## NDK host-tag selection
+- `Python3_EXECUTABLE` is build-machine-native Python.
+- `Python3_LIBRARY` and Python headers are for the selected target architecture.
+- `SWIG_EXECUTABLE` is now build-machine-native and configured through `SWIG_HOST_EXECUTABLE` (default: `out/host-tools/swig-install/bin/swig`).
+- Zlib, LibXml2, Zstd, LZMA, LibEdit, Curses, and Python static libraries are target-architecture inputs.
 
-The upstream NDK `Host` enum describes operating systems, not CPU architectures. On Linux it historically emitted only `linux-x86_64`, which cannot represent the two Android host variants.
+LLVM/Clang/LLDB TableGen executables are also build-time host tools. A verified native TableGen bootstrap path has not yet been added for cross-building AArch64 and ARMv7 from x86-64. This must be solved before those Stage2 builds can be considered complete.
 
-The new `patches/ndk/hosts.py.patch` adds architecture-aware Linux package tags:
+### Required target dependencies
 
-| Runtime/build machine | NDK host tag |
-|---|---|
-| x86_64 / amd64 | `linux-x86_64` |
-| AArch64 / arm64 | `android-arm64` |
-| ARMv7 / armv8l 32-bit userspace | `android-armv7` |
+For each Musl triple, the Stage2 preflight expects target-architecture static installs under `DEPS_PREFIX`:
 
-For reproducible cross-builds on an x86_64 CI runner, set `TERMUX_NDK_HOST_TAG` explicitly to one of those three values. If unset, the patch detects the machine architecture with `os.uname().machine`. Unsupported tags and unknown architectures fail instead of silently falling back to x86_64.
+- zlib
+- libxml2
+- zstd
+- liblzma
+- libedit
+- ncurses (ncurses, form, and panel archives)
+- Python 3.12 static library and headers
 
-This change only selects the package directory. It does not by itself make the compiler, sysroot, linker, or dependency libraries architecture-correct.
+The Python interpreter and SWIG executable are separate native build-machine tools. Do not build them for the target architecture and then try to execute them during the cross build.
 
-## LLVM host config corrections
+The repository currently contains the Stage2 consumer and prerequisite checks, but not a complete, verified three-architecture dependency bootstrap pipeline. The compiler wrappers, sysroots, dependency archives, and native TableGen tools must be supplied before a real Stage2 build can run.
 
-The three `llvm_android/configs*.py.patch` variants now select the upstream `LinuxMuslHostConfig` for Linux builds and set its architecture to AArch64, x86_64, or ARM respectively. The generic `LinuxConfig` (glibc) is no longer rewritten to use Android/Bionic triples.
+## Automated validation
 
-The `base_builders.py.patch` now derives `--target`, `LLVM_HOST_TRIPLE`, and `LLVM_TARGET_ARCH` from the selected host config. LLVM backends are restricted to `AArch64;ARM;X86`, which cover the four requested Android target ABIs without building unrelated backends.
+Two GitHub Actions workflows are present:
 
-The NDK `toolchains*.py.patch` variants have now been changed to use the matching static-musl triple, require `TERMUX_NDK_SYSROOT`, take Linux host library search paths from that sysroot, and avoid adding the stage0 Clang `lib64` directory to target host links. Their application and Python syntax are checked against the pinned NDK source by CI. This is still source-level integration; it does not prove the selected sysroot contains every required library or that the resulting binaries run.
+- `.github/workflows/host-script-validation.yml`: Bash syntax, ShellCheck, patch hunk counts, host environment mappings, and unsupported architecture behavior.
+- `.github/workflows/upstream-patch-applicability.yml`: applies each of the three LLVM Android patch sets to a clean checkout of `mirror-goog-llvm-r563880-release`, and each of the three NDK host patch sets to a clean checkout of `platform/ndk` main; then runs Python syntax compilation on the modified modules.
 
+The upstream patch-application workflow has passed for all six architecture variants. This proves patch applicability and Python syntax against those source snapshots, not that LLVM or the NDK has been built.
 
-## Environment required by the NDK host toolchain patches
+## Remaining release gates
 
-Before running the NDK host build for one architecture, export both values:
+1. Build or provide the three Zig compiler wrappers and matching Musl sysroots.
+2. Build all target-architecture static dependencies and the target Python library.
+3. Bootstrap native LLVM/Clang/LLDB TableGen tools for cross builds.
+4. Run Stage2 separately for AArch64, x86-64, and ARMv7.
+5. Audit every produced ELF with `readelf -h`, `readelf -l`, and dynamic dependency checks; confirm static linking and expected machine types.
+6. Build sample C, C++, CMake, ndk-build, and JNI Android projects using each host toolchain, exercising all four Android target ABIs.
+7. Run the host tools on actual Android/Termux devices and supported proot environments.
+8. Assemble and test one unified NDK archive containing all three host toolchain directories.
 
-| Host variant | `TERMUX_NDK_HOST_TAG` | `TERMUX_NDK_SYSROOT` |
-|---|---|---|
-| x86-64 | `linux-x86_64` | the `x86_64-unknown-linux-musl` sysroot |
-| AArch64 | `android-arm64` | the `aarch64-unknown-linux-musl` sysroot |
-| ARMv7 | `android-armv7` | the `arm-unknown-linux-musleabihf` sysroot |
-
-`TERMUX_NDK_HOST_TAG` selects the package directory; `TERMUX_NDK_SYSROOT` must point to the actual target-architecture Musl sysroot directory, not the NDK Android application sysroot. The NDK toolchain patch intentionally raises an error if this variable is absent instead of silently using the old glibc/GCC sysroot.
-
-For cross-builds on an x86_64 runner, set these variables explicitly for each matrix job. The machine auto-detection in `hosts.py` is intended for runtime selection when users execute the packaged NDK on their device.
-
-
-## Shared host environment helper
-
-`patches/host-env.sh` is now the single source of truth for the host package tag, Musl triple, default Zig wrapper, CMake processor, and default sysroot path. Both `build_stage2.sh` and `validate_host_toolchain.sh` source it, so the LLVM stage2 and NDK layers cannot silently drift to different architecture mappings.
-
-For the NDK build step, source it in the same shell before invoking the upstream NDK build:
-
-```bash
-source patches/host-env.sh aarch64
-# or x86_64 / armv7
-# TERMUX_NDK_HOST_TAG and TERMUX_NDK_SYSROOT are now exported.
-```
-
-Override `LLVM_ROOT` or `TERMUX_NDK_SYSROOT` before sourcing when the build workspace uses non-default locations. The NDK toolchain patch verifies that the selected sysroot directory exists.
-
-
-## Build-machine tools versus target-architecture libraries
-
-Stage2 now distinguishes the tools that must execute during the build from libraries that are linked into the target host binaries:
-
-- `Python3_EXECUTABLE` is the build-machine-native Python interpreter; `Python3_LIBRARY` and headers are for the selected target architecture.
-- `SWIG_EXECUTABLE` is now a build-machine-native executable, configured through `SWIG_HOST_EXECUTABLE` (default: `out/host-tools/swig-install/bin/swig`). A SWIG binary built for the target architecture cannot be executed by an x86_64 CI runner.
-- Zlib, LibXml2, Zstd, LZMA, LibEdit, Curses and Python static libraries remain target-architecture inputs.
-
-One cross-build bootstrap issue remains open: LLVM/Clang/LLDB TableGen executables are also build-time host tools. The current Stage2 script has not yet established a verified native TableGen bootstrap path for cross-building AArch64 and ARMv7 from x86_64. Do not treat the cross-architecture Stage2 build as complete until the native TableGen tools are provided or the upstream LLVM build's host-tool bootstrap is verified.
+No Stage2 build, four-ABI integration test, on-device runtime test, or release archive is claimed to have passed yet.
