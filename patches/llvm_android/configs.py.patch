@@ -1,12 +1,12 @@
 --- a/src/llvm_android/configs.py
 +++ b/src/llvm_android/configs.py
-@@ -24,3 +24,4 @@
+@@ -24,3 +24,5 @@
  import functools
  import json
 +import os
 +import platform
  
-@@ -431,5 +432,19 @@ class LinuxMuslHostConfig(LinuxMuslConfig):
+@@ -431,5 +432,31 @@ class LinuxMuslHostConfig(LinuxMuslConfig):
      """Config for Musl as the host"""
 -    def __init__(self, arch: hosts.Arch = hosts.Arch.X86_64):
 -        super().__init__(arch=arch, is_cross_compiling=False)
