@@ -37,6 +37,7 @@ jobs:
           set -Eeuo pipefail
           bash -n patches/build_stage2.sh
           bash -n patches/validate_host_toolchain.sh
+          bash -n patches/host-env.sh
 
       - name: Install ShellCheck
         run: |
@@ -45,10 +46,18 @@ jobs:
 
       - name: Run ShellCheck
         run: |
-          shellcheck --severity=error patches/build_stage2.sh patches/validate_host_toolchain.sh
+          shellcheck --severity=error patches/build_stage2.sh patches/validate_host_toolchain.sh patches/host-env.sh
 
       - name: Validate unified diff hunk counts
         run: python3 patches/validate_patch_hunks.py
+
+      - name: Check host environment mappings
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          HOST_ARCH=aarch64 bash -c 'source patches/host-env.sh "$HOST_ARCH"; test "$TERMUX_NDK_HOST_TAG" = android-arm64; test "$TERMUX_NDK_HOST_TRIPLE" = aarch64-unknown-linux-musl'
+          HOST_ARCH=x86_64 bash -c 'source patches/host-env.sh "$HOST_ARCH"; test "$TERMUX_NDK_HOST_TAG" = linux-x86_64; test "$TERMUX_NDK_HOST_TRIPLE" = x86_64-unknown-linux-musl'
+          HOST_ARCH=armv7 bash -c 'source patches/host-env.sh "$HOST_ARCH"; test "$TERMUX_NDK_HOST_TAG" = android-armv7; test "$TERMUX_NDK_HOST_TRIPLE" = arm-unknown-linux-musleabihf'
 
       - name: Check unsupported architecture fails safely
         shell: bash
