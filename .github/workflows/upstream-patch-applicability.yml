@@ -47,6 +47,7 @@ jobs:
             https://android.googlesource.com/toolchain/llvm_android \
             /tmp/aosp/toolchain/llvm_android
           git -C /tmp/aosp/toolchain/llvm_android checkout 19756bd1d4ffca122636e553ab43b4befe827183
+          test "$(git -C /tmp/aosp/toolchain/llvm_android rev-parse HEAD)" = "19756bd1d4ffca122636e553ab43b4befe827183"
 
       - name: Check and apply LLVM Android patches
         env:
@@ -88,6 +89,7 @@ jobs:
           git clone --depth=1 --filter=blob:none --branch main \
             https://android.googlesource.com/platform/ndk /tmp/aosp-ndk
           git -C /tmp/aosp-ndk checkout c4bdd155116a9b42767534b35e93f83a91e4a06f
+          test "$(git -C /tmp/aosp-ndk rev-parse HEAD)" = "c4bdd155116a9b42767534b35e93f83a91e4a06f"
 
       - name: Check and apply NDK host patches
         env:
