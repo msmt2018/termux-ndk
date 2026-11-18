@@ -1,5 +1,5 @@
---- a/toolchain/llvm_android/paths.py	2024-09-21 18:26:34.858000000 +0800
-+++ b/toolchain/llvm_android/paths.py	2024-09-22 09:45:14.634342932 +0800
+--- a/src/llvm_android/paths.py	2024-09-21 18:26:34.858000000 +0800
++++ b/src/llvm_android/paths.py	2024-09-22 09:45:14.634342932 +0800
 @@ -70,7 +70,7 @@
  
  RISCV64_ANDROID_SYSROOT: Path = TOOLCHAIN_DIR / 'prebuilts' / 'sysroot' / 'platform' / 'riscv64-linux-android'
