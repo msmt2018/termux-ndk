@@ -81,5 +81,5 @@ jobs:
           set -Eeuo pipefail
           cd /tmp/aosp-ndk
           patch -p1 < "$GITHUB_WORKSPACE/patches/ndk/hosts.py.patch"
-          patch -p1 < "$GITHUB_WORKSPACE/patches/ndk/${{ matrix.toolchain_patch }}"
+          patch -p1 < "$GITHUB_WORKSPACE/patches/ndk/${{ matrix.toolchain_patch }}" || { cat ndk/toolchains.py.rej; exit 1; }
           python3 -m py_compile ndk/hosts.py ndk/toolchains.py
