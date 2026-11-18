@@ -187,7 +187,7 @@ cmake -G Ninja \
     -Dzstd_LIBRARY=${DEPS_PREFIX}/libzstd-${MUSL_TRIPLE}-install/lib/libzstd.a \
     -Dzstd_INCLUDE_DIR=${DEPS_PREFIX}/libzstd-${MUSL_TRIPLE}-install/include \
     -DLLDB_ENABLE_LUA=OFF \
-    -DSWIG_EXECUTABLE=${SWIG_HOST_EXECUTABLE} \
+    -DSWIG_EXECUTABLE="${SWIG_HOST_EXECUTABLE}" \\
     -DLLDB_ENABLE_PYTHON=ON \
     -DLLDB_EMBED_PYTHON_HOME=OFF \
     -DLLDB_ENABLE_LZMA=ON \
