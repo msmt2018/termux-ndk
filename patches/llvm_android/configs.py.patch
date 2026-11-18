@@ -5,7 +5,7 @@
  import json
 +import platform
  
-@@ -431,5 +432,17 @@ class LinuxMuslHostConfig(LinuxMuslConfig):
+@@ -431,5 +432,19 @@ class LinuxMuslHostConfig(LinuxMuslConfig):
      """Config for Musl as the host"""
 -    def __init__(self, arch: hosts.Arch = hosts.Arch.X86_64):
 -        super().__init__(arch=arch, is_cross_compiling=False)
@@ -27,7 +27,7 @@
 +        super().__init__(arch=arch, is_cross_compiling=(arch != build_arch))
  
      @property
-@@ -723,6 +736,6 @@ def host_config(musl: bool=False) -> Config:
+@@ -723,6 +738,6 @@ def host_config(musl: bool=False) -> Config:
      """Returns the Config matching the current machine."""
      return {
 -        hosts.Host.Linux: LinuxMuslHostConfig if musl else LinuxConfig,
