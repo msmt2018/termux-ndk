@@ -68,7 +68,7 @@ The following inputs must be built separately for each host architecture:
 - A matching static-musl sysroot.
 - Static target-architecture dependency archives under `out/lib/*-$MUSL_TRIPLE-install`.
 - A build-machine-native Python executable under `PYTHON_HOST_ROOT`.
-- A target-architecture `libpython3.12.a` and headers under `PYTHON_TARGET_ROOT`.
+- A target-architecture `libpythonX.Y.a` and matching headers under `PYTHON_TARGET_ROOT`, where `X.Y` is resolved from the pinned AOSP Linux Python prebuilt. The resolver rejects multiple header versions, missing `Python.h`/`pyconfig.h`, executable/header version mismatches, and conflicting overrides.
 - A build-machine-native SWIG executable under `SWIG_HOST_EXECUTABLE`.
 - Build-machine-native `llvm-tblgen`, `clang-tblgen`, and `lldb-tblgen` executables. Build these first for every Stage2 configuration with `bash patches/build_native_tools.sh`; CMake is explicitly configured with `CMAKE_SYSTEM_NAME=Linux`, so the script always supplies native TableGen tools through `LLVM_NATIVE_TOOL_DIR`.
 
