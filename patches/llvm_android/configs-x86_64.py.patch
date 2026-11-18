@@ -1,13 +1,13 @@
 --- a/toolchain/llvm_android/configs.py
 +++ b/toolchain/llvm_android/configs.py
-@@ -431,7 +431,7 @@ class LinuxMuslHostConfig(LinuxMuslConfig):
+@@ -431,5 +431,5 @@ class LinuxMuslHostConfig(LinuxMuslConfig):
      """Config for Musl as the host"""
 -    def __init__(self, arch: hosts.Arch = hosts.Arch.X86_64):
 +    def __init__(self, arch: hosts.Arch = hosts.Arch.X86_64):
          super().__init__(arch=arch, is_cross_compiling=False)
  
      @property
-@@ -723,7 +723,7 @@ def host_config(musl: bool=False) -> Config:
+@@ -723,6 +723,6 @@ def host_config(musl: bool=False) -> Config:
      """Returns the Config matching the current machine."""
      return {
 -        hosts.Host.Linux: LinuxMuslHostConfig if musl else LinuxConfig,
