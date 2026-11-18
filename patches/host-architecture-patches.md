@@ -87,6 +87,16 @@ HOST_ARCH=x86_64 bash patches/build_stage2.sh
 HOST_ARCH=armv7 bash patches/build_stage2.sh
 ```
 
+By default this configures CMake only. After the native TableGen bootstrap and all target dependencies are ready, use `BUILD_STAGE2=1` to build, install, and automatically audit the installed executables:
+
+```bash
+BUILD_STAGE2=1 HOST_ARCH=aarch64 bash patches/build_stage2.sh
+BUILD_STAGE2=1 HOST_ARCH=x86_64 bash patches/build_stage2.sh
+BUILD_STAGE2=1 HOST_ARCH=armv7 bash patches/build_stage2.sh
+```
+
+Set `BUILD_JOBS` to control parallelism. The post-install audit rejects an unexpected ELF machine, `PT_INTERP`, or `DT_NEEDED` dependency.
+
 Each architecture uses a separate build directory and install prefix. The script parameterizes the compiler wrapper, runtime triple, sysroot, dependency paths, Python paths, and CMake processor. It performs preflight checks before invoking CMake.
 
 The compiler smoke test can also be run independently:
@@ -97,7 +107,7 @@ HOST_ARCH=x86_64 bash patches/validate_host_toolchain.sh
 HOST_ARCH=armv7 bash patches/validate_host_toolchain.sh
 ```
 
-It checks the wrapper tools, `cc -dumpmachine`, static C and C++ compilation, ELF machine type, and absence of a PT_INTERP program header. It executes the test binaries only when the build machine matches the selected architecture.
+It checks the wrapper tools, `cc -dumpmachine`, static C and C++ compilation, ELF machine type, and absence of both `PT_INTERP` and `DT_NEEDED` dependencies. It executes the test binaries only when the build machine matches the selected architecture.
 
 ### Build-time tools versus target libraries
 
@@ -128,7 +138,7 @@ The repository currently contains the Stage2 consumer and prerequisite checks, b
 
 ## Automated validation
 
-Two GitHub Actions workflows are present:
+Three GitHub Actions workflows are present:
 
 - `.github/workflows/host-script-validation.yml`: Bash syntax, ShellCheck, patch hunk counts, host environment mappings, and unsupported architecture behavior.
 - `.github/workflows/upstream-patch-applicability.yml`: applies each of the three LLVM Android patch sets to a clean checkout of `mirror-goog-llvm-r563880-release`, and each of the three NDK host patch sets to a clean checkout of `platform/ndk` main; then runs Python syntax compilation on the modified modules.
