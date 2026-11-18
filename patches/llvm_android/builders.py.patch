@@ -1,5 +1,5 @@
---- a/toolchain/llvm_android/builders.py	2024-09-21 18:26:34.718000000 +0800
-+++ b/toolchain/llvm_android/builders.py	2024-09-25 11:16:26.522196699 +0800
+--- a/src/llvm_android/builders.py	2024-09-21 18:26:34.718000000 +0800
++++ b/src/llvm_android/builders.py	2024-09-25 11:16:26.522196699 +0800
 @@ -212,6 +212,7 @@
      def cflags(self) -> List[str]:
          cflags = super().cflags
