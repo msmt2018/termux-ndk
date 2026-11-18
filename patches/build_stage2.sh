@@ -1,12 +1,85 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-# This script was originally auto-generated from llvm-toolchain/llvm_android/build.py
-# I've made some modifications to enable static compilation using Zig
-# Statically compile the llvm-toolchain using Zig and musl libc on a Linux-aarch64 host
-# Set the CMAKE_CROSSCOMPILING=TRUE, when compiling on Linux-x86 host
-# In fact, when statically compiling, you can remove the runtimes
+# Build LLVM stage2 for one Android-runnable CPU architecture using a static
+# Linux-musl toolchain. This does NOT produce Bionic-linked Android executables.
+#
+# Usage:
+#   HOST_ARCH=aarch64 ./build_stage2.sh
+#   HOST_ARCH=x86_64 TOOLCHAIN="$HOME/opt/zig-as-llvm-x86_64" ./build_stage2.sh
+#   HOST_ARCH=armv7 TOOLCHAIN="$HOME/opt/zig-as-llvm-armv7" ./build_stage2.sh
+#
+# Each HOST_ARCH requires its own Zig wrapper, sysroot and dependency archives.
+# Keep the three builds in separate build/install directories.
 
-TOOLCHAIN=$HOME/opt/zig-as-llvm
+HOST_ARCH="${HOST_ARCH:-aarch64}"
+case "${HOST_ARCH}" in
+    aarch64)
+        MUSL_TRIPLE="aarch64-unknown-linux-musl"
+        CMAKE_PROCESSOR="aarch64"
+        DEFAULT_TOOLCHAIN="$HOME/opt/zig-as-llvm"
+        ;;
+    x86_64)
+        MUSL_TRIPLE="x86_64-unknown-linux-musl"
+        CMAKE_PROCESSOR="x86_64"
+        DEFAULT_TOOLCHAIN="$HOME/opt/zig-as-llvm-x86_64"
+        ;;
+    armv7)
+        MUSL_TRIPLE="arm-unknown-linux-musleabihf"
+        CMAKE_PROCESSOR="arm"
+        DEFAULT_TOOLCHAIN="$HOME/opt/zig-as-llvm-armv7"
+        ;;
+    *)
+        echo "error: unsupported HOST_ARCH '${HOST_ARCH}' (expected aarch64, x86_64 or armv7)" >&2
+        exit 2
+        ;;
+esac
+
+TOOLCHAIN="${TOOLCHAIN:-${DEFAULT_TOOLCHAIN}}"
+LLVM_ROOT="${LLVM_ROOT:-$HOME/proj/llvm-toolchain}"
+LLVM_SRC_DIR="${LLVM_SRC_DIR:-${LLVM_ROOT}/out/llvm-project/llvm}"
+BUILD_DIR="${BUILD_DIR:-${LLVM_ROOT}/out/stage2-build-${HOST_ARCH}}"
+INSTALL_PREFIX="${INSTALL_PREFIX:-${LLVM_ROOT}/out/stage2-install-${HOST_ARCH}}"
+DEPS_PREFIX="${DEPS_PREFIX:-${LLVM_ROOT}/out/lib}"
+SYSROOT="${SYSROOT:-${LLVM_ROOT}/prebuilts/build-tools/sysroots/${MUSL_TRIPLE}}"
+PYTHON_ROOT="${PYTHON_ROOT:-${LLVM_ROOT}/prebuilts/python/linux-x86}"
+
+# Cross-compilation is determined from the actual build machine, not inferred
+# from the output directory name. Zig wrappers must already target HOST_ARCH.
+BUILD_MACHINE="$(uname -m)"
+case "${BUILD_MACHINE}:${HOST_ARCH}" in
+    x86_64:x86_64|aarch64:aarch64|armv7l:armv7|armv8l:armv7)
+        CMAKE_CROSSCOMPILING=FALSE
+        ;;
+    *)
+        CMAKE_CROSSCOMPILING=TRUE
+        ;;
+esac
+
+for tool in cc c++ ld objcopy ar ranlib strip; do
+    if [[ ! -x "${TOOLCHAIN}/bin/${tool}" ]]; then
+        echo "error: missing executable ${TOOLCHAIN}/bin/${tool}" >&2
+        exit 3
+    fi
+done
+for required in "${LLVM_SRC_DIR}/CMakeLists.txt" "${SYSROOT}" "${PYTHON_ROOT}/bin/python3.12"; do
+    if [[ ! -e "${required}" ]]; then
+        echo "error: required stage2 input does not exist: ${required}" >&2
+        exit 4
+    fi
+done
+
+mkdir -p "${BUILD_DIR}" "${INSTALL_PREFIX}"
+cd "${BUILD_DIR}"
+
+echo "Stage2 host architecture : ${HOST_ARCH}"
+echo "Musl runtime triple      : ${MUSL_TRIPLE}"
+echo "Zig wrapper              : ${TOOLCHAIN}"
+echo "Sysroot                  : ${SYSROOT}"
+echo "Dependency prefix        : ${DEPS_PREFIX}"
+echo "Build directory          : ${BUILD_DIR}"
+echo "Install prefix           : ${INSTALL_PREFIX}"
+echo "Cross compiling          : ${CMAKE_CROSSCOMPILING}"
 
 cmake -G Ninja \
     -DCMAKE_C_COMPILER=$TOOLCHAIN/bin/cc \
@@ -22,14 +95,15 @@ cmake -G Ninja \
     -DCMAKE_EXE_LINKER_FLAGS='-static -fuse-ld=lld -Wl,--hash-style=both' \
     -DLLVM_TARGETS_TO_BUILD='AArch64;ARM;BPF;RISCV;WebAssembly;X86' \
     -DLLVM_ENABLE_PROJECTS='bolt;clang;clang-tools-extra;lld;lldb;polly' \
-    -DCMAKE_INSTALL_PREFIX=$HOME/proj/llvm-toolchain/out/stage2-install \
+    -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
     -DCMAKE_INSTALL_LIBDIR=lib \
     -DCMAKE_BUILD_TYPE=MinSizeRel \
     -DCMAKE_SYSTEM_NAME=Linux \
-    -DCMAKE_CROSSCOMPILING=FALSE \
+    -DCMAKE_CROSSCOMPILING=${CMAKE_CROSSCOMPILING} \
+    -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_PROCESSOR} \
     -DCMAKE_LINK_DEPENDS_USE_LINKER=FALSE \
-    -DLLVM_BUILTIN_TARGETS=aarch64-unknown-linux-musl \
-    -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-unknown-linux-musl \
+    -DLLVM_BUILTIN_TARGETS=${MUSL_TRIPLE} \
+    -DLLVM_DEFAULT_TARGET_TRIPLE=${MUSL_TRIPLE} \
     -DCLANG_DEFAULT_LINKER=lld \
     -DCLANG_DEFAULT_OBJCOPY=llvm-objcopy \
     -DLLVM_ENABLE_ZLIB=FORCE_ON \
@@ -77,41 +151,41 @@ cmake -G Ninja \
     -DLLVM_ENABLE_THREADS=ON \
     -DLLVM_VERSION_SUFFIX= \
     -DLLVM_PROFDATA_FILE=$HOME/proj/llvm-toolchain/out/r563880.profdata \
-    -DPython3_LIBRARY=$HOME/proj/llvm-toolchain/prebuilts/python/linux-x86/lib/libpython3.12.a \
-    -DPython3_LIBRARIES=$HOME/proj/llvm-toolchain/prebuilts/python/linux-x86/lib/libpython3.12.a \
-    -DPython3_INCLUDE_DIR=$HOME/proj/llvm-toolchain/prebuilts/python/linux-x86/include/python3.12 \
-    -DPython3_INCLUDE_DIRS=$HOME/proj/llvm-toolchain/prebuilts/python/linux-x86/include/python3.12 \
-    -DPython3_EXECUTABLE=$HOME/proj/llvm-toolchain/prebuilts/python/linux-x86/bin/python3.12 \
-    -DZLIB_INCLUDE_DIR=$HOME/proj/llvm-toolchain/out/lib/libz-aarch64-unknown-linux-musl-install/include \
-    -DZLIB_LIBRARY=$HOME/proj/llvm-toolchain/out/lib/libz-aarch64-unknown-linux-musl-install/lib/libz.a \
-    -DLIBXML2_INCLUDE_DIR=$HOME/proj/llvm-toolchain/out/lib/libxml2-aarch64-unknown-linux-musl-install/include/libxml2 \
-    -DLIBXML2_LIBRARY=$HOME/proj/llvm-toolchain/out/lib/libxml2-aarch64-unknown-linux-musl-install/lib/libxml2.a \
-    -Dzstd_LIBRARY=$HOME/proj/llvm-toolchain/out/lib/libzstd-aarch64-unknown-linux-musl-install/lib/libzstd.a \
-    -Dzstd_INCLUDE_DIR=$HOME/proj/llvm-toolchain/out/lib/libzstd-aarch64-unknown-linux-musl-install/include \
+    -DPython3_LIBRARY=${PYTHON_ROOT}/lib/libpython3.12.a \
+    -DPython3_LIBRARIES=${PYTHON_ROOT}/lib/libpython3.12.a \
+    -DPython3_INCLUDE_DIR=${PYTHON_ROOT}/include/python3.12 \
+    -DPython3_INCLUDE_DIRS=${PYTHON_ROOT}/include/python3.12 \
+    -DPython3_EXECUTABLE=${PYTHON_ROOT}/bin/python3.12 \
+    -DZLIB_INCLUDE_DIR=${DEPS_PREFIX}/libz-${MUSL_TRIPLE}-install/include \
+    -DZLIB_LIBRARY=${DEPS_PREFIX}/libz-${MUSL_TRIPLE}-install/lib/libz.a \
+    -DLIBXML2_INCLUDE_DIR=${DEPS_PREFIX}/libxml2-${MUSL_TRIPLE}-install/include/libxml2 \
+    -DLIBXML2_LIBRARY=${DEPS_PREFIX}/libxml2-${MUSL_TRIPLE}-install/lib/libxml2.a \
+    -Dzstd_LIBRARY=${DEPS_PREFIX}/libzstd-${MUSL_TRIPLE}-install/lib/libzstd.a \
+    -Dzstd_INCLUDE_DIR=${DEPS_PREFIX}/libzstd-${MUSL_TRIPLE}-install/include \
     -DLLDB_ENABLE_LUA=OFF \
-    -DSWIG_EXECUTABLE=$HOME/proj/llvm-toolchain/out/lib/swig-aarch64-unknown-linux-musl-install/bin/swig \
+    -DSWIG_EXECUTABLE=${DEPS_PREFIX}/swig-${MUSL_TRIPLE}-install/bin/swig \
     -DLLDB_ENABLE_PYTHON=ON \
     -DLLDB_EMBED_PYTHON_HOME=OFF \
     -DLLDB_ENABLE_LZMA=ON \
     -DLLVM_ENABLE_LZMA=FORCE_ON \
     -DLLVM_USE_STATIC_LZMA=ON \
-    -DLIBLZMA_INCLUDE_DIR=$HOME/proj/llvm-toolchain/out/lib/liblzma-aarch64-unknown-linux-musl-install/include \
-    -DLIBLZMA_LIBRARY=$HOME/proj/llvm-toolchain/out/lib/liblzma-aarch64-unknown-linux-musl-install/lib/liblzma.a \
+    -DLIBLZMA_INCLUDE_DIR=${DEPS_PREFIX}/liblzma-${MUSL_TRIPLE}-install/include \
+    -DLIBLZMA_LIBRARY=${DEPS_PREFIX}/liblzma-${MUSL_TRIPLE}-install/lib/liblzma.a \
     -DLLDB_ENABLE_LIBEDIT=ON \
-    -DLibEdit_INCLUDE_DIRS=$HOME/proj/llvm-toolchain/out/lib/libedit-aarch64-unknown-linux-musl-install/include \
-    -DLibEdit_LIBRARIES=$HOME/proj/llvm-toolchain/out/lib/libedit-aarch64-unknown-linux-musl-install/lib/libedit.a \
+    -DLibEdit_INCLUDE_DIRS=${DEPS_PREFIX}/libedit-${MUSL_TRIPLE}-install/include \
+    -DLibEdit_LIBRARIES=${DEPS_PREFIX}/libedit-${MUSL_TRIPLE}-install/lib/libedit.a \
     -DLLDB_ENABLE_LIBXML2=ON \
     -DLLDB_ENABLE_CURSES=ON \
     -DLLDB_INCLUDE_TESTS=OFF \
-    -DCURSES_INCLUDE_DIRS='/home/proj/llvm-toolchain/out/lib/libncurses-aarch64-unknown-linux-musl-install/include;/home/proj/llvm-toolchain/out/lib/libncurses-aarch64-unknown-linux-musl-install/include/ncurses' \
-    -DCURSES_LIBRARIES='/home/proj/llvm-toolchain/out/lib/libncurses-aarch64-unknown-linux-musl-install/lib/libncurses.a;/home/proj/llvm-toolchain/out/lib/libncurses-aarch64-unknown-linux-musl-install/lib/libform.a;/home/proj/llvm-toolchain/out/lib/libncurses-aarch64-unknown-linux-musl-install/lib/libpanel.a' \
-    -DPANEL_LIBRARIES='/home/proj/llvm-toolchain/out/lib/libncurses-aarch64-unknown-linux-musl-install/lib/libncurses.a;/home/proj/llvm-toolchain/out/lib/libncurses-aarch64-unknown-linux-musl-install/lib/libform.a;/home/proj/llvm-toolchain/out/lib/libncurses-aarch64-unknown-linux-musl-install/lib/libpanel.a' \
+    -DCURSES_INCLUDE_DIRS="${DEPS_PREFIX}/libncurses-${MUSL_TRIPLE}-install/include;${DEPS_PREFIX}/libncurses-${MUSL_TRIPLE}-install/include/ncurses" \
+    -DCURSES_LIBRARIES="${DEPS_PREFIX}/libncurses-${MUSL_TRIPLE}-install/lib/libncurses.a;${DEPS_PREFIX}/libncurses-${MUSL_TRIPLE}-install/lib/libform.a;${DEPS_PREFIX}/libncurses-${MUSL_TRIPLE}-install/lib/libpanel.a" \
+    -DPANEL_LIBRARIES="${DEPS_PREFIX}/libncurses-${MUSL_TRIPLE}-install/lib/libncurses.a;${DEPS_PREFIX}/libncurses-${MUSL_TRIPLE}-install/lib/libform.a;${DEPS_PREFIX}/libncurses-${MUSL_TRIPLE}-install/lib/libpanel.a" \
     -DCLANG_VENDOR='Android (dev, +pgo, -bolt, +lto, -mlgo, based on r563880c)' \
     -DCLANG_REPOSITORY_STRING='https://android.googlesource.com/toolchain/llvm-project' \
     -DBUG_REPORT_URL='https://github.com/android-ndk/ndk/issues' \
     '-DLLVM_ENABLE_RUNTIMES=compiler-rt;libcxx;libcxxabi;libunwind' \
-    '-DLLVM_RUNTIME_TARGETS=aarch64-unknown-linux-musl' \
-    -DCMAKE_SYSROOT=$HOME/proj/llvm-toolchain/prebuilts/build-tools/sysroots/aarch64-unknown-linux-musl \
+    '-DLLVM_RUNTIME_TARGETS=${MUSL_TRIPLE}' \
+    -DCMAKE_SYSROOT=${SYSROOT} \
     -DLLVM_BUILD_RUNTIME=ON \
     -DLIBCXX_ENABLE_STATIC=ON \
     -DLIBCXX_ENABLE_SHARED=OFF \
@@ -132,46 +206,46 @@ cmake -G Ninja \
     -DLIBCXXABI_HAS_PTHREAD_LIB=FALSE \
     -DLIBUNWIND_HAS_DL_LIB=FALSE \
     -DLIBUNWIND_HAS_PTHREAD_LIB=FALSE \
-    -DRUNTIMES_aarch64-unknown-linux-musl_LIBCXX_INCLUDE_BENCHMARKS=OFF \
-    '-DBUILTINS_aarch64-unknown-linux-musl_CMAKE_C_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
-    '-DBUILTINS_aarch64-unknown-linux-musl_CMAKE_CXX_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -Wno-unused-command-line-argument -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
-    '-DBUILTINS_aarch64-unknown-linux-musl_CMAKE_EXE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
-    '-DBUILTINS_aarch64-unknown-linux-musl_CMAKE_SHARED_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
-    '-DBUILTINS_aarch64-unknown-linux-musl_CMAKE_MODULE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
-    -DRUNTIMES_aarch64-unknown-linux-musl_CMAKE_SYSROOT=$HOME/proj/llvm-toolchain/prebuilts/build-tools/sysroots/aarch64-unknown-linux-musl \
-    -DBUILTINS_aarch64-unknown-linux-musl_CMAKE_PLATFORM_NO_VERSIONED_SONAME=ON \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBCXX_USE_COMPILER_RT=TRUE \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBCXX_HAS_MUSL_LIBC=TRUE \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBCXXABI_USE_COMPILER_RT=TRUE \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBUNWIND_USE_COMPILER_RT=TRUE \
-    -DBUILTINS_aarch64-unknown-linux-musl_COMPILER_RT_USE_BUILTINS_LIBRARY=TRUE \
-    -DBUILTINS_aarch64-unknown-linux-musl_CMAKE_LINK_DEPENDS_USE_LINKER=FALSE \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBCXX_HAS_RT_LIB=FALSE \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBCXX_HAS_PTHREAD_LIB=FALSE \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBCXXABI_HAS_PTHREAD_LIB=FALSE \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBUNWIND_HAS_DL_LIB=FALSE \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBUNWIND_HAS_PTHREAD_LIB=FALSE \
-    -DBUILTINS_aarch64-unknown-linux-musl_LLVM_DEFAULT_TARGET_TRIPLE=aarch64-unknown-linux-musl \
-    -DBUILTINS_aarch64-unknown-linux-musl_CMAKE_POSITION_INDEPENDENT_CODE=ON \
-    -DBUILTINS_aarch64-unknown-linux-musl_LLVM_ENABLE_LIBCXX=ON \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBCXXABI_USE_LLVM_UNWINDER=ON \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBCXXABI_ENABLE_STATIC_UNWINDER=ON \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBCXX_HAS_ATOMIC_LIB=NO \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBCXX_ENABLE_ABI_LINKER_SCRIPT=OFF \
-    -DBUILTINS_aarch64-unknown-linux-musl_LIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON \
-    '-DBUILTINS_aarch64-unknown-linux-musl_LIBCXX_TEST_COMPILER_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -Wno-unused-command-line-argument -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
-    '-DBUILTINS_aarch64-unknown-linux-musl_LIBCXX_TEST_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
-    -DBUILTINS_aarch64-unknown-linux-musl_SANITIZER_ALLOW_CXXABI=OFF \
-    '-DRUNTIMES_aarch64-unknown-linux-musl_CMAKE_C_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
-    '-DRUNTIMES_aarch64-unknown-linux-musl_CMAKE_CXX_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -Wno-unused-command-line-argument -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
-    '-DRUNTIMES_aarch64-unknown-linux-musl_CMAKE_EXE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
-    '-DRUNTIMES_aarch64-unknown-linux-musl_CMAKE_SHARED_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
-    '-DRUNTIMES_aarch64-unknown-linux-musl_CMAKE_MODULE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
-    -DRUNTIMES_aarch64-unknown-linux-musl_CMAKE_PLATFORM_NO_VERSIONED_SONAME=ON \
-    -DRUNTIMES_aarch64-unknown-linux-musl_LIBCXX_USE_COMPILER_RT=TRUE \
-    -DRUNTIMES_aarch64-unknown-linux-musl_LIBCXX_HAS_MUSL_LIBC=TRUE \
-    -DRUNTIMES_aarch64-unknown-linux-musl_LIBCXXABI_USE_COMPILER_RT=TRUE \
-    -DRUNTIMES_aarch64-unknown-linux-musl_LIBUNWIND_USE_COMPILER_RT=TRUE \
-    -DRUNTIMES_aarch64-unknown-linux-musl_COMPILER_RT_USE_BUILTINS_LIBRARY=TRUE \
-    -DRUNTIMES_aarch64-unknown-linux-musl_CMAKE_LINK_DEPENDS_USE=FALSE \
-    $HOME/proj/llvm-toolchain/out/llvm-project/llvm
+    -DRUNTIMES_${MUSL_TRIPLE}_LIBCXX_INCLUDE_BENCHMARKS=OFF \
+    '-DBUILTINS_${MUSL_TRIPLE}_CMAKE_C_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
+    '-DBUILTINS_${MUSL_TRIPLE}_CMAKE_CXX_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -Wno-unused-command-line-argument -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
+    '-DBUILTINS_${MUSL_TRIPLE}_CMAKE_EXE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
+    '-DBUILTINS_${MUSL_TRIPLE}_CMAKE_SHARED_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
+    '-DBUILTINS_${MUSL_TRIPLE}_CMAKE_MODULE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
+    -DRUNTIMES_${MUSL_TRIPLE}_CMAKE_SYSROOT=${SYSROOT} \
+    -DBUILTINS_${MUSL_TRIPLE}_CMAKE_PLATFORM_NO_VERSIONED_SONAME=ON \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBCXX_USE_COMPILER_RT=TRUE \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBCXX_HAS_MUSL_LIBC=TRUE \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBCXXABI_USE_COMPILER_RT=TRUE \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBUNWIND_USE_COMPILER_RT=TRUE \
+    -DBUILTINS_${MUSL_TRIPLE}_COMPILER_RT_USE_BUILTINS_LIBRARY=TRUE \
+    -DBUILTINS_${MUSL_TRIPLE}_CMAKE_LINK_DEPENDS_USE_LINKER=FALSE \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBCXX_HAS_RT_LIB=FALSE \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBCXX_HAS_PTHREAD_LIB=FALSE \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBCXXABI_HAS_PTHREAD_LIB=FALSE \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBUNWIND_HAS_DL_LIB=FALSE \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBUNWIND_HAS_PTHREAD_LIB=FALSE \
+    -DBUILTINS_${MUSL_TRIPLE}_LLVM_DEFAULT_TARGET_TRIPLE=${MUSL_TRIPLE} \
+    -DBUILTINS_${MUSL_TRIPLE}_CMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DBUILTINS_${MUSL_TRIPLE}_LLVM_ENABLE_LIBCXX=ON \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBCXXABI_USE_LLVM_UNWINDER=ON \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBCXXABI_ENABLE_STATIC_UNWINDER=ON \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBCXX_HAS_ATOMIC_LIB=NO \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBCXX_ENABLE_ABI_LINKER_SCRIPT=OFF \
+    -DBUILTINS_${MUSL_TRIPLE}_LIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON \
+    '-DBUILTINS_${MUSL_TRIPLE}_LIBCXX_TEST_COMPILER_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -Wno-unused-command-line-argument -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
+    '-DBUILTINS_${MUSL_TRIPLE}_LIBCXX_TEST_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
+    -DBUILTINS_${MUSL_TRIPLE}_SANITIZER_ALLOW_CXXABI=OFF \
+    '-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_C_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
+    '-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_CXX_FLAGS=-static -fPIC -D_LIBCPP_HAS_MUSL_LIBC -D_LARGEFILE64_SOURCE=1 -Wno-unused-command-line-argument -D_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT=1 -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled' \
+    '-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_EXE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
+    '-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_SHARED_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
+    '-DRUNTIMES_${MUSL_TRIPLE}_CMAKE_MODULE_LINKER_FLAGS=-static -fuse-ld=lld -Wl,--hash-style=both' \
+    -DRUNTIMES_${MUSL_TRIPLE}_CMAKE_PLATFORM_NO_VERSIONED_SONAME=ON \
+    -DRUNTIMES_${MUSL_TRIPLE}_LIBCXX_USE_COMPILER_RT=TRUE \
+    -DRUNTIMES_${MUSL_TRIPLE}_LIBCXX_HAS_MUSL_LIBC=TRUE \
+    -DRUNTIMES_${MUSL_TRIPLE}_LIBCXXABI_USE_COMPILER_RT=TRUE \
+    -DRUNTIMES_${MUSL_TRIPLE}_LIBUNWIND_USE_COMPILER_RT=TRUE \
+    -DRUNTIMES_${MUSL_TRIPLE}_COMPILER_RT_USE_BUILTINS_LIBRARY=TRUE \
+    -DRUNTIMES_${MUSL_TRIPLE}_CMAKE_LINK_DEPENDS_USE=FALSE \
+    ${LLVM_SRC_DIR}
